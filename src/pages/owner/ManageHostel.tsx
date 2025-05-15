@@ -20,8 +20,8 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { 
-  ArrowLeft, 
-  Edit, 
+  ArrowLeftIcon, 
+  PencilIcon, 
   Building, 
   MapPin, 
   Phone, 
@@ -30,7 +30,7 @@ import {
   Tv, 
   Utensils, 
   ShowerHead,
-  Trash2,
+  TrashIcon,
   Menu
 } from "lucide-react";
 import { toast } from "@/hooks/use-toast";
@@ -145,7 +145,7 @@ const ManageHostel = () => {
           className="p-0" 
           onClick={() => navigate("/owner/dashboard")}
         >
-          <ArrowLeft className="h-4 w-4 mr-2" />
+          <ArrowLeftIcon className="h-4 w-4 mr-2" />
           Back
         </Button>
         
@@ -187,7 +187,7 @@ const ManageHostel = () => {
                   disabled={isLoading}
                   className="mt-4"
                 >
-                  <Trash2 className="h-4 w-4 mr-2" />
+                  <TrashIcon className="h-4 w-4 mr-2" />
                   Delete Hostel
                 </Button>
               </nav>
@@ -204,7 +204,7 @@ const ManageHostel = () => {
             className="mb-4 p-0" 
             onClick={() => navigate("/owner/dashboard")}
           >
-            <ArrowLeft className="h-4 w-4 mr-2" />
+            <ArrowLeftIcon className="h-4 w-4 mr-2" />
             Back to Dashboard
           </Button>
         </div>
@@ -219,7 +219,7 @@ const ManageHostel = () => {
             disabled={isLoading}
             className="hidden md:flex"
           >
-            <Trash2 className="h-4 w-4 mr-2" />
+            <TrashIcon className="h-4 w-4 mr-2" />
             Delete Hostel
           </Button>
         </div>
@@ -250,7 +250,7 @@ const ManageHostel = () => {
                     size="sm"
                     onClick={() => setIsEditing(true)}
                   >
-                    <Edit className="h-4 w-4 mr-2" />
+                    <PencilIcon className="h-4 w-4 mr-2" />
                     Edit Details
                   </Button>
                 )}
