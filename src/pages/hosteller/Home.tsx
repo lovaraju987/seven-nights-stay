@@ -1,9 +1,8 @@
-
 import React, { useState } from "react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
-import { Search, MapPin, Star, Filter, Users, User } from "lucide-react";
+import { Search, MapPin, Star, Filter, User, Calendar } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 
 // Mock data for hostels
@@ -209,7 +208,7 @@ const Home = () => {
           className="flex flex-col items-center text-gray-500"
           onClick={() => navigate("/hosteller/bookings")}
         >
-          <MapPin className="h-5 w-5" />
+          <Calendar className="h-5 w-5" />
           <span className="text-xs mt-1">Bookings</span>
         </Button>
         
