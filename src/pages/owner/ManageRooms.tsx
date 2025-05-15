@@ -1,9 +1,8 @@
-
 import React, { useState } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { 
   PlusIcon, 
-  Pencil1Icon as EditIcon, 
+  PencilIcon, 
   TrashIcon, 
   BedDoubleIcon
 } from "lucide-react";
@@ -281,7 +280,7 @@ const ManageRooms = () => {
                         size="sm"
                         onClick={() => setEditingRoom(room)}
                       >
-                        <EditIcon className="h-4 w-4" />
+                        <PencilIcon className="h-4 w-4" />
                       </Button>
                     </CardFooter>
                   </Card>
