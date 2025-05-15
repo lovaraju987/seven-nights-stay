@@ -1,5 +1,5 @@
 
-import React from "react";
+import React, { useState } from "react";
 import { useNavigate, useLocation } from "react-router-dom";
 import {
   HomeIcon,
@@ -15,6 +15,7 @@ import { toast } from "@/components/ui/sonner";
 const AgentLayout = ({ children }: { children: React.ReactNode }) => {
   const navigate = useNavigate();
   const location = useLocation();
+  const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
 
   const isActive = (path: string) => {
     return location.pathname === path;
@@ -23,6 +24,10 @@ const AgentLayout = ({ children }: { children: React.ReactNode }) => {
   const handleLogout = () => {
     toast.success("Logged out successfully");
     navigate("/role-selection");
+  };
+
+  const toggleMobileMenu = () => {
+    setMobileMenuOpen(!mobileMenuOpen);
   };
 
   const menuItems = [
@@ -105,7 +110,7 @@ const AgentLayout = ({ children }: { children: React.ReactNode }) => {
           <h1 className="text-lg font-bold text-blue-600">OneTo7 Agent</h1>
           <div className="relative">
             {/* Mobile menu button */}
-            <button className="p-2">
+            <button className="p-2" onClick={toggleMobileMenu} aria-label="Toggle menu">
               <svg
                 xmlns="http://www.w3.org/2000/svg"
                 className="h-6 w-6"
@@ -121,13 +126,48 @@ const AgentLayout = ({ children }: { children: React.ReactNode }) => {
                 />
               </svg>
             </button>
+            
+            {/* Mobile menu dropdown */}
+            {mobileMenuOpen && (
+              <div className="absolute right-0 mt-2 w-56 bg-white rounded-md shadow-lg py-1 z-20">
+                {menuItems.map((item) => (
+                  <a 
+                    key={item.path}
+                    href={item.path}
+                    className={`flex items-center gap-2 px-4 py-2 text-sm ${
+                      isActive(item.path) 
+                        ? "bg-blue-50 text-blue-600" 
+                        : "text-gray-700 hover:bg-gray-100"
+                    }`}
+                    onClick={(e) => {
+                      e.preventDefault();
+                      navigate(item.path);
+                      setMobileMenuOpen(false);
+                    }}
+                  >
+                    {item.icon}
+                    <span>{item.name}</span>
+                  </a>
+                ))}
+                <button
+                  className="flex items-center gap-2 px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 w-full text-left"
+                  onClick={() => {
+                    handleLogout();
+                    setMobileMenuOpen(false);
+                  }}
+                >
+                  <LogOutIcon className="h-5 w-5" />
+                  <span>Logout</span>
+                </button>
+              </div>
+            )}
           </div>
         </div>
       </div>
 
       {/* Main Content */}
       <main className="flex-1 overflow-auto">
-        <div className="px-4 py-6 md:px-8 md:py-8">{children}</div>
+        <div className="px-4 py-6 md:px-8 md:py-8 mt-16 md:mt-0">{children}</div>
       </main>
     </div>
   );
