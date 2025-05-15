@@ -1,0 +1,187 @@
+
+import React from "react";
+import { useNavigate } from "react-router-dom";
+import { Card, CardContent, CardHeader } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
+import { 
+  HomeIcon, 
+  BedDoubleIcon, 
+  CalendarIcon, 
+  CreditCardIcon, 
+  BarChartIcon,
+  QrCodeIcon,
+  PlusIcon
+} from "lucide-react";
+
+// Mock data for demonstration
+const mockData = {
+  hostelName: "Royal Boys Hostel",
+  status: "Verified",
+  occupancyRate: 75,
+  monthlyEarnings: 45000,
+  activeBookings: 12,
+  hasHostel: true // toggle to show different UI states
+};
+
+const OwnerDashboard = () => {
+  const navigate = useNavigate();
+  
+  // Simulate loading owner data
+  const [isLoading, setIsLoading] = React.useState(true);
+  
+  React.useEffect(() => {
+    // Simulate API call to fetch owner data
+    setTimeout(() => {
+      setIsLoading(false);
+    }, 1500);
+  }, []);
+
+  if (isLoading) {
+    return (
+      <div className="flex flex-col items-center justify-center min-h-screen p-4">
+        <div className="w-16 h-16 border-4 border-t-blue-500 border-b-blue-500 rounded-full animate-spin"></div>
+        <p className="mt-4 text-gray-600">Loading dashboard...</p>
+      </div>
+    );
+  }
+
+  return (
+    <div className="container mx-auto px-4 py-6 max-w-5xl">
+      <header className="mb-8">
+        <h1 className="text-2xl font-bold mb-1">Owner Dashboard</h1>
+        <p className="text-gray-500">Manage your hostel listings and bookings</p>
+      </header>
+      
+      {mockData.hasHostel ? (
+        <div className="space-y-6">
+          {/* Hostel Status Card */}
+          <Card className="overflow-hidden border-l-4 border-l-green-500">
+            <CardContent className="p-6">
+              <div className="flex justify-between items-center flex-wrap gap-4">
+                <div>
+                  <h2 className="text-xl font-bold">{mockData.hostelName}</h2>
+                  <div className="flex items-center mt-1">
+                    <span className="bg-green-100 text-green-800 text-xs px-2 py-1 rounded-full font-medium">
+                      {mockData.status}
+                    </span>
+                  </div>
+                </div>
+                <Button onClick={() => navigate(`/owner/manage-hostel/1`)}>
+                  Manage Hostel
+                </Button>
+              </div>
+            </CardContent>
+          </Card>
+
+          {/* Stats Grid */}
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+            <Card>
+              <CardContent className="p-6">
+                <div className="flex flex-col">
+                  <span className="text-gray-500 text-sm mb-1">Occupancy Rate</span>
+                  <span className="text-2xl font-bold">{mockData.occupancyRate}%</span>
+                  <div className="w-full bg-gray-200 rounded-full h-2.5 mt-2">
+                    <div 
+                      className="bg-blue-600 h-2.5 rounded-full" 
+                      style={{ width: `${mockData.occupancyRate}%` }}
+                    ></div>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+            
+            <Card>
+              <CardContent className="p-6">
+                <div className="flex flex-col">
+                  <span className="text-gray-500 text-sm mb-1">Monthly Earnings</span>
+                  <span className="text-2xl font-bold">₹{mockData.monthlyEarnings}</span>
+                  <span className="text-green-600 text-xs mt-2">+15% from last month</span>
+                </div>
+              </CardContent>
+            </Card>
+            
+            <Card>
+              <CardContent className="p-6">
+                <div className="flex flex-col">
+                  <span className="text-gray-500 text-sm mb-1">Active Bookings</span>
+                  <span className="text-2xl font-bold">{mockData.activeBookings}</span>
+                  <span className="text-blue-600 text-xs mt-2">
+                    <button onClick={() => navigate('/owner/bookings')} className="underline">View all</button>
+                  </span>
+                </div>
+              </CardContent>
+            </Card>
+          </div>
+
+          {/* Quick Actions */}
+          <div>
+            <h3 className="text-lg font-medium mb-4">Quick Actions</h3>
+            <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
+              <Button 
+                variant="outline" 
+                className="h-20 flex flex-col items-center justify-center"
+                onClick={() => navigate('/owner/manage-rooms/1')}
+              >
+                <BedDoubleIcon className="h-5 w-5 mb-1" />
+                <span>Manage Rooms</span>
+              </Button>
+              
+              <Button 
+                variant="outline" 
+                className="h-20 flex flex-col items-center justify-center"
+                onClick={() => navigate('/owner/bookings')}
+              >
+                <CalendarIcon className="h-5 w-5 mb-1" />
+                <span>View Bookings</span>
+              </Button>
+              
+              <Button 
+                variant="outline" 
+                className="h-20 flex flex-col items-center justify-center"
+                onClick={() => navigate('/owner/subscription')}
+              >
+                <CreditCardIcon className="h-5 w-5 mb-1" />
+                <span>Subscription</span>
+              </Button>
+              
+              <Button 
+                variant="outline" 
+                className="h-20 flex flex-col items-center justify-center"
+                onClick={() => navigate('/owner/qr-storefront/1')}
+              >
+                <QrCodeIcon className="h-5 w-5 mb-1" />
+                <span>QR Storefront</span>
+              </Button>
+              
+              <Button 
+                variant="outline" 
+                className="h-20 flex flex-col items-center justify-center"
+                onClick={() => navigate('/owner/analytics')}
+              >
+                <BarChartIcon className="h-5 w-5 mb-1" />
+                <span>Analytics</span>
+              </Button>
+            </div>
+          </div>
+        </div>
+      ) : (
+        // No Hostel Added yet
+        <div className="text-center py-12">
+          <div className="bg-gray-100 rounded-full p-6 inline-flex mb-6">
+            <HomeIcon className="h-12 w-12 text-blue-500" />
+          </div>
+          <h2 className="text-xl font-bold mb-2">No Hostels Added Yet</h2>
+          <p className="text-gray-500 max-w-md mx-auto mb-6">
+            Add your first hostel to start accepting bookings and managing your business through OneTo7.
+          </p>
+          <Button onClick={() => navigate('/owner/add-hostel')} className="gap-2">
+            <PlusIcon className="h-4 w-4" />
+            Add Your First Hostel
+          </Button>
+        </div>
+      )}
+    </div>
+  );
+};
+
+export default OwnerDashboard;

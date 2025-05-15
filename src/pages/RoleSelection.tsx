@@ -19,7 +19,7 @@ const RoleSelection = () => {
     if (selectedRole === "hosteller") {
       navigate("/login");
     } else {
-      navigate("/owner-login");
+      navigate("/owner/login");
     }
   };
 
