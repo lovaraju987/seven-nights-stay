@@ -1,9 +1,8 @@
 
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
-import { ArrowLeft, Sliders, Check } from "lucide-react";
+import { ArrowLeft, Sliders } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { Drawer, DrawerContent, DrawerHeader, DrawerTitle, DrawerFooter } from "@/components/ui/drawer";
 import { Slider } from "@/components/ui/slider";
 import { Switch } from "@/components/ui/switch";
 import { Label } from "@/components/ui/label";
@@ -20,6 +19,27 @@ const Filters = () => {
   });
   
   const [gender, setGender] = useState<string | null>(null);
+  
+  // Load filters from localStorage on component mount
+  useEffect(() => {
+    const storedFilters = localStorage.getItem("hostelFilters");
+    if (storedFilters) {
+      try {
+        const parsedFilters = JSON.parse(storedFilters);
+        if (parsedFilters.priceRange) {
+          setPriceRange(parsedFilters.priceRange);
+        }
+        if (parsedFilters.amenities) {
+          setAmenities(parsedFilters.amenities);
+        }
+        if (parsedFilters.gender) {
+          setGender(parsedFilters.gender);
+        }
+      } catch (error) {
+        console.error("Error parsing filters from localStorage:", error);
+      }
+    }
+  }, []);
   
   const handlePriceChange = (value: number[]) => {
     setPriceRange(value);
