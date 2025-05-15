@@ -58,7 +58,7 @@ const Home = () => {
     { id: "all", label: "All" },
     { id: "boys", label: "Boys", icon: <User className="h-3.5 w-3.5" /> },
     { id: "girls", label: "Girls", icon: <User className="h-3.5 w-3.5" /> },
-    { id: "co-ed", label: "Co-ed", icon: <Users className="h-3.5 w-3.5" /> }
+    { id: "co-ed", label: "Co-ed", icon: <User className="h-3.5 w-3.5" /> }
   ];
 
   const handleFilterSelect = (filterId: string) => {
