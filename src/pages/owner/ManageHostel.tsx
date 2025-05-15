@@ -30,10 +30,16 @@ import {
   Tv, 
   Utensils, 
   ShowerHead,
-  Trash2
+  Trash2,
+  Menu
 } from "lucide-react";
 import { toast } from "@/hooks/use-toast";
 import { AspectRatio } from "@/components/ui/aspect-ratio";
+import {
+  Sheet,
+  SheetContent,
+  SheetTrigger,
+} from "@/components/ui/sheet";
 
 // Mock data for a sample hostel
 const mockHostel = {
@@ -72,6 +78,7 @@ const ManageHostel = () => {
   const [isEditing, setIsEditing] = useState(false);
   const [hostel, setHostel] = useState(mockHostel);
   const [isLoading, setIsLoading] = useState(false);
+  const [activeTab, setActiveTab] = useState("details");
   
   // Form state
   const [formData, setFormData] = useState({
@@ -131,25 +138,86 @@ const ManageHostel = () => {
 
   return (
     <div className="container mx-auto px-4 py-6 max-w-5xl">
-      {/* Back button and header */}
-      <div className="mb-6">
+      {/* Mobile navigation */}
+      <div className="flex md:hidden justify-between items-center mb-4">
         <Button 
           variant="ghost" 
-          className="mb-4 p-0" 
+          className="p-0" 
           onClick={() => navigate("/owner/dashboard")}
         >
           <ArrowLeft className="h-4 w-4 mr-2" />
-          Back to Dashboard
+          Back
         </Button>
+        
+        <Sheet>
+          <SheetTrigger asChild>
+            <Button variant="outline" size="icon">
+              <Menu className="h-5 w-5" />
+              <span className="sr-only">Menu</span>
+            </Button>
+          </SheetTrigger>
+          <SheetContent side="right" className="w-[240px] sm:w-[300px]">
+            <div className="py-4 space-y-4">
+              <h2 className="text-lg font-medium">Manage Hostel</h2>
+              <nav className="flex flex-col space-y-2">
+                <Button 
+                  variant={activeTab === "details" ? "default" : "ghost"} 
+                  className="justify-start" 
+                  onClick={() => setActiveTab("details")}
+                >
+                  Details
+                </Button>
+                <Button 
+                  variant={activeTab === "rooms" ? "default" : "ghost"} 
+                  className="justify-start"
+                  onClick={() => setActiveTab("rooms")}
+                >
+                  Rooms & Pricing
+                </Button>
+                <Button 
+                  variant={activeTab === "amenities" ? "default" : "ghost"} 
+                  className="justify-start"
+                  onClick={() => setActiveTab("amenities")}
+                >
+                  Amenities & Photos
+                </Button>
+                <Button 
+                  variant="destructive" 
+                  onClick={handleDelete}
+                  disabled={isLoading}
+                  className="mt-4"
+                >
+                  <Trash2 className="h-4 w-4 mr-2" />
+                  Delete Hostel
+                </Button>
+              </nav>
+            </div>
+          </SheetContent>
+        </Sheet>
+      </div>
+      
+      {/* Back button and header */}
+      <div className="mb-6">
+        <div className="hidden md:block">
+          <Button 
+            variant="ghost" 
+            className="mb-4 p-0" 
+            onClick={() => navigate("/owner/dashboard")}
+          >
+            <ArrowLeft className="h-4 w-4 mr-2" />
+            Back to Dashboard
+          </Button>
+        </div>
         <div className="flex justify-between items-center flex-wrap gap-4">
           <div>
             <h1 className="text-2xl font-bold">{hostel.name}</h1>
-            <p className="text-gray-500">{hostel.address}</p>
+            <p className="text-muted-foreground">{hostel.address}</p>
           </div>
           <Button 
             variant="destructive" 
             onClick={handleDelete}
             disabled={isLoading}
+            className="hidden md:flex"
           >
             <Trash2 className="h-4 w-4 mr-2" />
             Delete Hostel
@@ -158,8 +226,13 @@ const ManageHostel = () => {
       </div>
       
       {/* Main content with tabs */}
-      <Tabs defaultValue="details" className="w-full">
-        <TabsList className="grid grid-cols-3 mb-6">
+      <Tabs 
+        defaultValue="details" 
+        className="w-full"
+        value={activeTab}
+        onValueChange={setActiveTab}
+      >
+        <TabsList className="grid grid-cols-3 mb-6 hidden md:grid">
           <TabsTrigger value="details">Details</TabsTrigger>
           <TabsTrigger value="rooms">Rooms & Pricing</TabsTrigger>
           <TabsTrigger value="amenities">Amenities & Photos</TabsTrigger>
@@ -167,7 +240,7 @@ const ManageHostel = () => {
         
         {/* Details Tab */}
         <TabsContent value="details">
-          <Card>
+          <Card className="border-sidebar-border bg-sidebar-accent">
             <CardHeader>
               <CardTitle className="flex items-center justify-between">
                 Hostel Information
@@ -281,7 +354,7 @@ const ManageHostel = () => {
               ) : (
                 <div className="space-y-6">
                   <div className="grid gap-2">
-                    <div className="flex items-center gap-2 text-gray-500">
+                    <div className="flex items-center gap-2 text-muted-foreground">
                       <Building className="h-4 w-4" />
                       <span>Type:</span>
                     </div>
@@ -289,7 +362,7 @@ const ManageHostel = () => {
                   </div>
                   
                   <div className="grid gap-2">
-                    <div className="flex items-center gap-2 text-gray-500">
+                    <div className="flex items-center gap-2 text-muted-foreground">
                       <MapPin className="h-4 w-4" />
                       <span>Address:</span>
                     </div>
@@ -297,7 +370,7 @@ const ManageHostel = () => {
                   </div>
                   
                   <div className="grid gap-2">
-                    <div className="flex items-center gap-2 text-gray-500">
+                    <div className="flex items-center gap-2 text-muted-foreground">
                       <Phone className="h-4 w-4" />
                       <span>Phone:</span>
                     </div>
@@ -305,7 +378,7 @@ const ManageHostel = () => {
                   </div>
                   
                   <div className="grid gap-2">
-                    <div className="flex items-center gap-2 text-gray-500">
+                    <div className="flex items-center gap-2 text-muted-foreground">
                       <Mail className="h-4 w-4" />
                       <span>Email:</span>
                     </div>
@@ -313,7 +386,7 @@ const ManageHostel = () => {
                   </div>
                   
                   <div className="grid gap-2">
-                    <h3 className="text-gray-500">Description:</h3>
+                    <h3 className="text-muted-foreground">Description:</h3>
                     <p>{hostel.description}</p>
                   </div>
                 </div>
@@ -324,7 +397,7 @@ const ManageHostel = () => {
         
         {/* Rooms Tab */}
         <TabsContent value="rooms">
-          <Card>
+          <Card className="border-sidebar-border bg-sidebar-accent">
             <CardHeader>
               <CardTitle className="flex items-center justify-between">
                 Rooms & Pricing
@@ -341,7 +414,7 @@ const ManageHostel = () => {
               </CardDescription>
             </CardHeader>
             <CardContent>
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
                 <Card>
                   <CardHeader className="pb-2">
                     <CardTitle className="text-lg">Single Occupancy</CardTitle>
@@ -352,7 +425,7 @@ const ManageHostel = () => {
                   <CardContent className="pt-0">
                     <div className="text-2xl font-bold">
                       ₹{hostel.price.single}
-                      <span className="text-sm font-normal text-gray-500">/month</span>
+                      <span className="text-sm font-normal text-muted-foreground">/month</span>
                     </div>
                   </CardContent>
                 </Card>
@@ -367,12 +440,12 @@ const ManageHostel = () => {
                   <CardContent className="pt-0">
                     <div className="text-2xl font-bold">
                       ₹{hostel.price.double}
-                      <span className="text-sm font-normal text-gray-500">/month</span>
+                      <span className="text-sm font-normal text-muted-foreground">/month</span>
                     </div>
                   </CardContent>
                 </Card>
                 
-                <Card>
+                <Card className="sm:col-span-2 lg:col-span-1">
                   <CardHeader className="pb-2">
                     <CardTitle className="text-lg">Triple Occupancy</CardTitle>
                     <CardDescription>
@@ -382,14 +455,14 @@ const ManageHostel = () => {
                   <CardContent className="pt-0">
                     <div className="text-2xl font-bold">
                       ₹{hostel.price.triple}
-                      <span className="text-sm font-normal text-gray-500">/month</span>
+                      <span className="text-sm font-normal text-muted-foreground">/month</span>
                     </div>
                   </CardContent>
                 </Card>
               </div>
               
-              <div className="mt-6 bg-gray-50 rounded-lg p-4">
-                <p className="text-sm text-gray-500">
+              <div className="mt-6 bg-sidebar-accent rounded-lg p-4 border border-sidebar-border">
+                <p className="text-sm text-muted-foreground">
                   Go to the Manage Rooms page for detailed configuration of room types, 
                   inventory management, and setting up room-specific amenities and photos.
                 </p>
@@ -400,7 +473,7 @@ const ManageHostel = () => {
         
         {/* Amenities Tab */}
         <TabsContent value="amenities">
-          <Card>
+          <Card className="border-sidebar-border bg-sidebar-accent">
             <CardHeader>
               <CardTitle>Amenities & Photos</CardTitle>
               <CardDescription>
@@ -411,14 +484,14 @@ const ManageHostel = () => {
               {/* Amenities Section */}
               <div>
                 <h3 className="text-lg font-medium mb-4">Available Amenities</h3>
-                <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
+                <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-2 md:gap-4">
                   {hostel.amenities.map((amenity, index) => (
-                    <div key={index} className="flex items-center gap-2 bg-gray-50 p-3 rounded-md">
-                      {amenity === "WiFi" ? <Wifi className="h-4 w-4 text-blue-500" /> : 
-                       amenity === "TV Room" ? <Tv className="h-4 w-4 text-blue-500" /> : 
-                       amenity === "Mess" ? <Utensils className="h-4 w-4 text-blue-500" /> : 
-                       amenity === "Hot Water" ? <ShowerHead className="h-4 w-4 text-blue-500" /> : 
-                       <div className="w-4 h-4 bg-blue-500 rounded-full" />}
+                    <div key={index} className="flex items-center gap-2 bg-sidebar-primary/10 p-3 rounded-md">
+                      {amenity === "WiFi" ? <Wifi className="h-4 w-4 text-sidebar-primary" /> : 
+                       amenity === "TV Room" ? <Tv className="h-4 w-4 text-sidebar-primary" /> : 
+                       amenity === "Mess" ? <Utensils className="h-4 w-4 text-sidebar-primary" /> : 
+                       amenity === "Hot Water" ? <ShowerHead className="h-4 w-4 text-sidebar-primary" /> : 
+                       <div className="w-4 h-4 bg-sidebar-primary rounded-full" />}
                       <span className="text-sm">{amenity}</span>
                     </div>
                   ))}
@@ -433,17 +506,17 @@ const ManageHostel = () => {
               {/* Photos Section */}
               <div>
                 <h3 className="text-lg font-medium mb-4">Hostel Photos</h3>
-                <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-4">
                   {hostel.photos.map((photo, index) => (
                     <div key={index} className="relative group">
-                      <AspectRatio ratio={4/3} className="bg-gray-100 rounded-md overflow-hidden">
+                      <AspectRatio ratio={4/3} className="bg-sidebar-accent border border-sidebar-border rounded-md overflow-hidden">
                         <img
                           src={photo}
                           alt={`Hostel photo ${index + 1}`}
                           className="object-cover h-full w-full"
                         />
                       </AspectRatio>
-                      <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
+                      <div className="absolute inset-0 bg-sidebar-primary/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
                         <Button variant="secondary" size="sm" className="text-xs">
                           Replace
                         </Button>
