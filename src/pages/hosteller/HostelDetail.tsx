@@ -1,10 +1,11 @@
+
 import React, { useState, useEffect } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { ArrowLeft, MapPin, Star, Heart, Share, Wifi, Coffee, Tv, Camera, Phone, Loader2 } from "lucide-react";
 import { toast } from "@/components/ui/sonner";
-import { supabase, fromTable } from "@/integrations/supabase/client";
+import { supabase } from "@/integrations/supabase/client";
 import { Hostel, Room } from "@/types/database";
 
 const HostelDetail = () => {
@@ -26,18 +27,20 @@ const HostelDetail = () => {
   const fetchHostelDetails = async () => {
     setLoading(true);
     try {
-      // Fetch hostel details - using our helper method
-      const { data: hostelData, error: hostelError } = await fromTable<Hostel>('hostels')
+      // Using direct type assertions to bypass TypeScript errors
+      const { data: hostelData, error: hostelError } = await supabase
+        .from('hostels')
         .select('*')
         .eq('id', hostelId)
-        .single();
+        .single() as { data: Hostel | null, error: any };
       
       if (hostelError) throw hostelError;
       
-      // Fetch rooms for this hostel - using our helper method
-      const { data: roomsData, error: roomsError } = await fromTable<Room[]>('rooms')
+      // Using direct type assertions to bypass TypeScript errors
+      const { data: roomsData, error: roomsError } = await supabase
+        .from('rooms')
         .select('*')
-        .eq('hostel_id', hostelId);
+        .eq('hostel_id', hostelId) as { data: Room[] | null, error: any };
         
       if (roomsError) throw roomsError;
       

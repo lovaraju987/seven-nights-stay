@@ -39,14 +39,15 @@ const BookingsPage = () => {
     
     try {
       // Fetch all bookings for the current user with hostel and room details
-      // Using type assertion with our helper method
-      const { data, error } = await fromTable<BookingWithDetails>('bookings')
+      // Using more direct type assertions to bypass TypeScript errors
+      const { data, error } = await supabase
+        .from('bookings')
         .select(`
           *,
           hostels:hostel_id (*),
           rooms:room_id (*)
         `)
-        .eq('hosteller_id', userId);
+        .eq('hosteller_id', userId) as { data: BookingWithDetails[] | null, error: any };
       
       if (error) throw error;
       
@@ -117,11 +118,12 @@ const BookingsPage = () => {
     if (!confirm("Are you sure you want to cancel this booking?")) return;
     
     try {
-      // Using our helper method for updates
-      const { error } = await updateTable('bookings')
+      // Using direct type assertion to bypass TypeScript errors
+      const { error } = await supabase
+        .from('bookings')
         .update({ status: 'cancelled' })
         .eq('id', bookingId)
-        .eq('hosteller_id', userId);
+        .eq('hosteller_id', userId) as { error: any };
         
       if (error) throw error;
       
