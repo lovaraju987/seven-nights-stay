@@ -17,7 +17,14 @@ const mockHostels = [
     rating: 4.7,
     price: 599,
     availableBeds: 8,
-    image: "https://images.unsplash.com/photo-1555854877-bab0e564b8d5?crop=entropy&cs=tinysrgb&fit=crop&fm=jpg&h=250&ixid=MnwxfDB8MXxyYW5kb218MHx8aG9zdGVsfHx8fHx8MTY4NDc0NjQ5OQ&ixlib=rb-4.0.3&q=80&w=400"
+    image: "https://images.unsplash.com/photo-1555854877-bab0e564b8d5?crop=entropy&cs=tinysrgb&fit=crop&fm=jpg&h=250&ixid=MnwxfDB8MXxyYW5kb218MHx8aG9zdGVsfHx8fHx8MTY4NDc0NjQ5OQ&ixlib=rb-4.0.3&q=80&w=400",
+    amenities: {
+      wifi: true,
+      ac: true,
+      food: true,
+      laundry: false,
+      cleaning: true
+    }
   },
   {
     id: "2",
@@ -27,7 +34,14 @@ const mockHostels = [
     rating: 4.3,
     price: 649,
     availableBeds: 5,
-    image: "https://images.unsplash.com/photo-1613977257363-707ba9348227?crop=entropy&cs=tinysrgb&fit=crop&fm=jpg&h=250&ixid=MnwxfDB8MXxyYW5kb218MHx8aG9zdGVsfHx8fHx8MTY4NDc0NjUwMA&ixlib=rb-4.0.3&q=80&w=400"
+    image: "https://images.unsplash.com/photo-1613977257363-707ba9348227?crop=entropy&cs=tinysrgb&fit=crop&fm=jpg&h=250&ixid=MnwxfDB8MXxyYW5kb218MHx8aG9zdGVsfHx8fHx8MTY4NDc0NjUwMA&ixlib=rb-4.0.3&q=80&w=400",
+    amenities: {
+      wifi: true,
+      ac: false,
+      food: true,
+      laundry: true,
+      cleaning: false
+    }
   },
   {
     id: "3",
@@ -37,7 +51,14 @@ const mockHostels = [
     rating: 4.8,
     price: 679,
     availableBeds: 3,
-    image: "https://images.unsplash.com/photo-1555854877-bab0e564b8d5?crop=entropy&cs=tinysrgb&fit=crop&fm=jpg&h=250&ixid=MnwxfDB8MXxyYW5kb218MHx8aG9zdGVsfHx8fHx8MTY4NDc0NjQ5OQ&ixlib=rb-4.0.3&q=80&w=400"
+    image: "https://images.unsplash.com/photo-1555854877-bab0e564b8d5?crop=entropy&cs=tinysrgb&fit=crop&fm=jpg&h=250&ixid=MnwxfDB8MXxyYW5kb218MHx8aG9zdGVsfHx8fHx8MTY4NDc0NjQ5OQ&ixlib=rb-4.0.3&q=80&w=400",
+    amenities: {
+      wifi: true,
+      ac: true,
+      food: true,
+      laundry: true,
+      cleaning: true
+    }
   },
   {
     id: "4",
@@ -47,7 +68,14 @@ const mockHostels = [
     rating: 4.5,
     price: 699,
     availableBeds: 12,
-    image: "https://images.unsplash.com/photo-1613977257363-707ba9348227?crop=entropy&cs=tinysrgb&fit=crop&fm=jpg&h=250&ixid=MnwxfDB8MXxyYW5kb218MHx8aG9zdGVsfHx8fHx8MTY4NDc0NjUwMA&ixlib=rb-4.0.3&q=80&w=400"
+    image: "https://images.unsplash.com/photo-1613977257363-707ba9348227?crop=entropy&cs=tinysrgb&fit=crop&fm=jpg&h=250&ixid=MnwxfDB8MXxyYW5kb218MHx8aG9zdGVsfHx8fHx8MTY4NDc0NjUwMA&ixlib=rb-4.0.3&q=80&w=400",
+    amenities: {
+      wifi: true,
+      ac: false,
+      food: false,
+      laundry: true,
+      cleaning: true
+    }
   }
 ];
 
@@ -55,6 +83,12 @@ const Home = () => {
   const [searchQuery, setSearchQuery] = useState("");
   const [selectedFilter, setSelectedFilter] = useState<string | null>(null);
   const [wishlistedHostelIds, setWishlistedHostelIds] = useState<string[]>([]);
+  const [appliedFilters, setAppliedFilters] = useState<{
+    priceRange?: number[];
+    amenities?: Record<string, boolean>;
+    gender?: string | null;
+  } | null>(null);
+  
   const navigate = useNavigate();
 
   const filters = [
@@ -64,8 +98,9 @@ const Home = () => {
     { id: "co-ed", label: "Co-ed", icon: <User className="h-3.5 w-3.5" /> }
   ];
 
-  // Load wishlisted hostel IDs from localStorage on component mount
+  // Load wishlisted hostel IDs and filters from localStorage on component mount
   useEffect(() => {
+    // Load wishlist
     const storedWishlist = localStorage.getItem("hostelWishlist");
     if (storedWishlist) {
       try {
@@ -75,6 +110,22 @@ const Home = () => {
         console.error("Error parsing wishlist from localStorage:", error);
       }
     }
+    
+    // Load filters
+    const storedFilters = localStorage.getItem("hostelFilters");
+    if (storedFilters) {
+      try {
+        const parsedFilters = JSON.parse(storedFilters);
+        setAppliedFilters(parsedFilters);
+        
+        // Set the selected filter based on stored gender preference
+        if (parsedFilters.gender) {
+          setSelectedFilter(parsedFilters.gender);
+        }
+      } catch (error) {
+        console.error("Error parsing filters from localStorage:", error);
+      }
+    }
   }, []);
 
   const handleFilterSelect = (filterId: string) => {
@@ -82,15 +133,41 @@ const Home = () => {
   };
 
   const filteredHostels = mockHostels.filter(hostel => {
+    // Text search filter
+    const matchesSearch = hostel.name.toLowerCase().includes(searchQuery.toLowerCase()) || 
+                         hostel.location.toLowerCase().includes(searchQuery.toLowerCase());
+    
+    // Gender filter (either from quick filter or from applied filters)
     let matchesGender = true;
     if (selectedFilter && selectedFilter !== 'all') {
       matchesGender = hostel.gender === selectedFilter;
+    } else if (appliedFilters?.gender) {
+      matchesGender = hostel.gender === appliedFilters.gender;
     }
     
-    const matchesSearch = hostel.name.toLowerCase().includes(searchQuery.toLowerCase()) || 
-                         hostel.location.toLowerCase().includes(searchQuery.toLowerCase());
-                         
-    return matchesGender && matchesSearch;
+    // Price range filter
+    let matchesPrice = true;
+    if (appliedFilters?.priceRange) {
+      matchesPrice = hostel.price >= appliedFilters.priceRange[0] && 
+                     hostel.price <= appliedFilters.priceRange[1];
+    }
+    
+    // Amenities filter
+    let matchesAmenities = true;
+    if (appliedFilters?.amenities) {
+      // Only check amenities that are set to true in filters
+      const requestedAmenities = Object.entries(appliedFilters.amenities)
+        .filter(([_, isSelected]) => isSelected)
+        .map(([name]) => name);
+      
+      if (requestedAmenities.length > 0) {
+        matchesAmenities = requestedAmenities.every(amenity => 
+          hostel.amenities[amenity as keyof typeof hostel.amenities]
+        );
+      }
+    }
+    
+    return matchesSearch && matchesGender && matchesPrice && matchesAmenities;
   });
 
   const handleHostelClick = (hostelId: string) => {
@@ -123,6 +200,13 @@ const Home = () => {
     // Update state
     setWishlistedHostelIds(currentWishlist.map((item: any) => item.id));
   };
+  
+  const handleClearFilters = () => {
+    setSearchQuery('');
+    setSelectedFilter(null);
+    setAppliedFilters(null);
+    localStorage.removeItem("hostelFilters");
+  };
 
   return (
     <div className="flex flex-col min-h-screen bg-gray-50">
@@ -145,7 +229,7 @@ const Home = () => {
               className="absolute right-1 top-1/2 transform -translate-y-1/2"
               onClick={() => navigate("/hosteller/filters")}
             >
-              <Filter className="h-4 w-4 text-gray-500" />
+              <Filter className={`h-4 w-4 ${appliedFilters ? "text-blue-600" : "text-gray-500"}`} />
             </Button>
           </div>
           
@@ -166,6 +250,28 @@ const Home = () => {
               </button>
             ))}
           </div>
+          
+          {/* Applied Filters Indicator */}
+          {appliedFilters && (Object.values(appliedFilters).some(value => 
+            value !== null && 
+            (typeof value === 'object' ? 
+              (Array.isArray(value) ? value.length > 0 : Object.values(value).some(v => v)) : 
+              true)
+          )) && (
+            <div className="mt-2 flex items-center justify-between">
+              <div className="text-xs text-blue-600 font-medium">
+                Filters applied
+              </div>
+              <Button
+                variant="ghost"
+                size="sm"
+                className="text-xs text-gray-500 p-0 h-auto"
+                onClick={handleClearFilters}
+              >
+                Clear all
+              </Button>
+            </div>
+          )}
         </div>
       </header>
 
@@ -234,10 +340,7 @@ const Home = () => {
             <Button 
               variant="outline" 
               className="mt-4"
-              onClick={() => {
-                setSearchQuery('');
-                setSelectedFilter(null);
-              }}
+              onClick={handleClearFilters}
             >
               Clear filters
             </Button>
