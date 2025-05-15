@@ -1,77 +1,110 @@
 
-import React from "react";
+import React, { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Badge } from "@/components/ui/badge";
 import { useNavigate } from "react-router-dom";
-import { MapPin, Phone, Calendar, AlertCircle } from "lucide-react";
+import { MapPin, Phone, Calendar, AlertCircle, Loader2 } from "lucide-react";
+import { supabase } from "@/integrations/supabase/client";
+import { toast } from "@/components/ui/sonner";
 
 const BookingsPage = () => {
   const navigate = useNavigate();
   
-  // Mock data for bookings
-  const upcomingBookings = [
-    {
-      id: "b1",
-      hostelId: "1",
-      hostelName: "Backpackers Haven",
-      roomType: "Mixed Dormitory",
-      location: "Koramangala, Bangalore",
-      checkIn: "2025-05-18",
-      checkOut: "2025-05-25",
-      paymentStatus: "Paid",
-      amount: 4999,
-      bookingId: "BK-7836",
-      beds: 1
-    }
-  ];
+  const [upcomingBookings, setUpcomingBookings] = useState<any[]>([]);
+  const [pastBookings, setPastBookings] = useState<any[]>([]);
+  const [cancelledBookings, setCancelledBookings] = useState<any[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [userId, setUserId] = useState<string | null>(null);
   
-  const pastBookings = [
-    {
-      id: "b2",
-      hostelId: "2",
-      hostelName: "Urban Nest Co-Living",
-      roomType: "Single Room",
-      location: "Whitefield, Bangalore",
-      checkIn: "2025-04-12",
-      checkOut: "2025-04-19",
-      paymentStatus: "Paid",
-      amount: 6793,
-      bookingId: "BK-6453",
-      beds: 1
-    },
-    {
-      id: "b3",
-      hostelId: "3",
-      hostelName: "Sunrise Girls PG",
-      roomType: "Double Room",
-      location: "Indiranagar, Bangalore",
-      checkIn: "2025-03-05",
-      checkOut: "2025-03-12",
-      paymentStatus: "Paid",
-      amount: 5432,
-      bookingId: "BK-5321",
-      beds: 1
-    }
-  ];
+  useEffect(() => {
+    // Check if user is authenticated and get their ID
+    const checkAuth = async () => {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (user) {
+        setUserId(user.id);
+        fetchBookings(user.id);
+      } else {
+        // Redirect to login if not authenticated
+        navigate('/login');
+        toast.error("Please login to view your bookings");
+      }
+    };
+    
+    checkAuth();
+  }, [navigate]);
   
-  const cancelledBookings = [
-    {
-      id: "b4",
-      hostelId: "4",
-      hostelName: "Mountain View Hostel",
-      roomType: "Private Room",
-      location: "HSR Layout, Bangalore",
-      checkIn: "2025-02-20",
-      checkOut: "2025-02-27",
-      paymentStatus: "Refunded",
-      amount: 5999,
-      bookingId: "BK-4219",
-      beds: 2,
-      cancelReason: "Travel plans changed"
+  const fetchBookings = async (userId: string) => {
+    setLoading(true);
+    
+    try {
+      // Fetch all bookings for the current user with hostel and room details
+      const { data, error } = await supabase
+        .from('bookings')
+        .select(`
+          id, 
+          plan, 
+          start_date, 
+          end_date, 
+          guest_name, 
+          amount, 
+          payment_status, 
+          status,
+          created_at,
+          hostels:hostel_id (name, address),
+          rooms:room_id (room_name, type)
+        `)
+        .eq('hosteller_id', userId);
+      
+      if (error) throw error;
+      
+      if (data) {
+        // Format the data for the UI and separate into categories
+        const formattedData = data.map(booking => ({
+          id: booking.id,
+          hostelId: booking.hostels ? booking.hostels.id : '',
+          hostelName: booking.hostels ? booking.hostels.name : 'Unknown Hostel',
+          roomType: booking.rooms ? booking.rooms.type : 'Unknown Room',
+          location: booking.hostels && booking.hostels.address ? 
+            (typeof booking.hostels.address === 'string' ? booking.hostels.address : 
+            `${booking.hostels.address.city || ''}, ${booking.hostels.address.state || ''}`) : 
+            'Unknown Location',
+          checkIn: booking.start_date,
+          checkOut: booking.end_date,
+          paymentStatus: booking.payment_status,
+          amount: booking.amount,
+          bookingId: booking.id.substring(0, 8).toUpperCase(),
+          beds: 1, // This would need to come from another query if needed
+          cancelReason: booking.status === 'cancelled' ? 'Cancelled by user' : undefined
+        }));
+        
+        // Filter bookings by status
+        const upcoming = formattedData.filter(booking => 
+          booking.checkOut >= new Date().toISOString().split('T')[0] && 
+          booking.status !== 'cancelled'
+        );
+        
+        const past = formattedData.filter(booking => 
+          booking.checkOut < new Date().toISOString().split('T')[0] && 
+          booking.status !== 'cancelled'
+        );
+        
+        const cancelled = formattedData.filter(booking => 
+          booking.status === 'cancelled'
+        );
+        
+        setUpcomingBookings(upcoming);
+        setPastBookings(past);
+        setCancelledBookings(cancelled);
+      }
+    } catch (error) {
+      console.error("Error fetching bookings:", error);
+      toast.error("Failed to load bookings");
+    } finally {
+      setLoading(false);
     }
-  ];
+  };
   
   // Function to format date
   const formatDate = (dateStr: string) => {
@@ -87,6 +120,30 @@ const BookingsPage = () => {
     return Math.ceil(diffTime / (1000 * 60 * 60 * 24));
   };
 
+  // Handle booking cancellation
+  const handleCancelBooking = async (bookingId: string) => {
+    if (!confirm("Are you sure you want to cancel this booking?")) return;
+    
+    try {
+      const { error } = await supabase
+        .from('bookings')
+        .update({ status: 'cancelled' })
+        .eq('id', bookingId)
+        .eq('hosteller_id', userId); // Ensure user can only cancel their own bookings
+        
+      if (error) throw error;
+      
+      toast.success("Booking cancelled successfully");
+      
+      // Refresh bookings list
+      if (userId) fetchBookings(userId);
+      
+    } catch (error) {
+      console.error("Error cancelling booking:", error);
+      toast.error("Failed to cancel booking");
+    }
+  };
+
   return (
     <div className="flex flex-col min-h-screen bg-gray-50">
       {/* Header */}
@@ -98,70 +155,78 @@ const BookingsPage = () => {
       
       {/* Main Content */}
       <main className="flex-1 p-4 max-w-md mx-auto w-full">
-        <Tabs defaultValue="upcoming" className="w-full">
-          <TabsList className="grid grid-cols-3 mb-4">
-            <TabsTrigger value="upcoming">Upcoming</TabsTrigger>
-            <TabsTrigger value="past">Past</TabsTrigger>
-            <TabsTrigger value="cancelled">Cancelled</TabsTrigger>
-          </TabsList>
-          
-          <TabsContent value="upcoming">
-            {upcomingBookings.length > 0 ? (
-              <div className="space-y-4">
-                {upcomingBookings.map(booking => (
-                  <BookingCard 
-                    key={booking.id} 
-                    booking={booking} 
-                    type="upcoming"
-                    formatDate={formatDate}
-                    calculateNights={calculateNights}
-                    navigate={navigate}
-                  />
-                ))}
-              </div>
-            ) : (
-              <EmptyState message="No upcoming bookings yet" />
-            )}
-          </TabsContent>
-          
-          <TabsContent value="past">
-            {pastBookings.length > 0 ? (
-              <div className="space-y-4">
-                {pastBookings.map(booking => (
-                  <BookingCard 
-                    key={booking.id} 
-                    booking={booking} 
-                    type="past"
-                    formatDate={formatDate}
-                    calculateNights={calculateNights}
-                    navigate={navigate}
-                  />
-                ))}
-              </div>
-            ) : (
-              <EmptyState message="No past bookings found" />
-            )}
-          </TabsContent>
-          
-          <TabsContent value="cancelled">
-            {cancelledBookings.length > 0 ? (
-              <div className="space-y-4">
-                {cancelledBookings.map(booking => (
-                  <BookingCard 
-                    key={booking.id} 
-                    booking={booking} 
-                    type="cancelled"
-                    formatDate={formatDate}
-                    calculateNights={calculateNights}
-                    navigate={navigate}
-                  />
-                ))}
-              </div>
-            ) : (
-              <EmptyState message="No cancelled bookings" />
-            )}
-          </TabsContent>
-        </Tabs>
+        {loading ? (
+          <div className="flex flex-col items-center justify-center h-64">
+            <Loader2 className="h-8 w-8 animate-spin text-blue-500 mb-4" />
+            <p className="text-gray-500">Loading your bookings...</p>
+          </div>
+        ) : (
+          <Tabs defaultValue="upcoming" className="w-full">
+            <TabsList className="grid grid-cols-3 mb-4">
+              <TabsTrigger value="upcoming">Upcoming</TabsTrigger>
+              <TabsTrigger value="past">Past</TabsTrigger>
+              <TabsTrigger value="cancelled">Cancelled</TabsTrigger>
+            </TabsList>
+            
+            <TabsContent value="upcoming">
+              {upcomingBookings.length > 0 ? (
+                <div className="space-y-4">
+                  {upcomingBookings.map(booking => (
+                    <BookingCard 
+                      key={booking.id} 
+                      booking={booking} 
+                      type="upcoming"
+                      formatDate={formatDate}
+                      calculateNights={calculateNights}
+                      navigate={navigate}
+                      onCancel={() => handleCancelBooking(booking.id)}
+                    />
+                  ))}
+                </div>
+              ) : (
+                <EmptyState message="No upcoming bookings yet" />
+              )}
+            </TabsContent>
+            
+            <TabsContent value="past">
+              {pastBookings.length > 0 ? (
+                <div className="space-y-4">
+                  {pastBookings.map(booking => (
+                    <BookingCard 
+                      key={booking.id} 
+                      booking={booking} 
+                      type="past"
+                      formatDate={formatDate}
+                      calculateNights={calculateNights}
+                      navigate={navigate}
+                    />
+                  ))}
+                </div>
+              ) : (
+                <EmptyState message="No past bookings found" />
+              )}
+            </TabsContent>
+            
+            <TabsContent value="cancelled">
+              {cancelledBookings.length > 0 ? (
+                <div className="space-y-4">
+                  {cancelledBookings.map(booking => (
+                    <BookingCard 
+                      key={booking.id} 
+                      booking={booking} 
+                      type="cancelled"
+                      formatDate={formatDate}
+                      calculateNights={calculateNights}
+                      navigate={navigate}
+                    />
+                  ))}
+                </div>
+              ) : (
+                <EmptyState message="No cancelled bookings" />
+              )}
+            </TabsContent>
+          </Tabs>
+        )}
       </main>
       
       {/* Navigation */}
@@ -219,9 +284,10 @@ type BookingCardProps = {
   formatDate: (date: string) => string;
   calculateNights: (checkIn: string, checkOut: string) => number;
   navigate: (path: string) => void;
+  onCancel?: () => void;
 };
 
-const BookingCard = ({ booking, type, formatDate, calculateNights, navigate }: BookingCardProps) => {
+const BookingCard = ({ booking, type, formatDate, calculateNights, navigate, onCancel }: BookingCardProps) => {
   const nights = calculateNights(booking.checkIn, booking.checkOut);
   
   return (
@@ -314,23 +380,14 @@ const BookingCard = ({ booking, type, formatDate, calculateNights, navigate }: B
                 <Button 
                   variant="destructive" 
                   size="sm"
+                  onClick={onCancel}
                 >
                   Cancel
                 </Button>
               </div>
             )}
             
-            {type === 'past' && (
-              <Button 
-                variant="outline" 
-                size="sm"
-                onClick={() => navigate(`/hosteller/booking-details/${booking.id}`)}
-              >
-                View Details
-              </Button>
-            )}
-            
-            {type === 'cancelled' && (
+            {(type === 'past' || type === 'cancelled') && (
               <Button 
                 variant="outline" 
                 size="sm"
