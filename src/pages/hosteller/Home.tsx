@@ -1,9 +1,11 @@
-import React, { useState } from "react";
+
+import React, { useState, useEffect } from "react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
-import { Search, MapPin, Star, Filter, User, Calendar } from "lucide-react";
+import { Search, MapPin, Star, Filter, User, Calendar, Heart } from "lucide-react";
 import { useNavigate } from "react-router-dom";
+import { toast } from "@/components/ui/sonner";
 
 // Mock data for hostels
 const mockHostels = [
@@ -52,6 +54,7 @@ const mockHostels = [
 const Home = () => {
   const [searchQuery, setSearchQuery] = useState("");
   const [selectedFilter, setSelectedFilter] = useState<string | null>(null);
+  const [wishlistedHostelIds, setWishlistedHostelIds] = useState<string[]>([]);
   const navigate = useNavigate();
 
   const filters = [
@@ -60,6 +63,19 @@ const Home = () => {
     { id: "girls", label: "Girls", icon: <User className="h-3.5 w-3.5" /> },
     { id: "co-ed", label: "Co-ed", icon: <User className="h-3.5 w-3.5" /> }
   ];
+
+  // Load wishlisted hostel IDs from localStorage on component mount
+  useEffect(() => {
+    const storedWishlist = localStorage.getItem("hostelWishlist");
+    if (storedWishlist) {
+      try {
+        const parsedWishlist = JSON.parse(storedWishlist);
+        setWishlistedHostelIds(parsedWishlist.map((hostel: any) => hostel.id));
+      } catch (error) {
+        console.error("Error parsing wishlist from localStorage:", error);
+      }
+    }
+  }, []);
 
   const handleFilterSelect = (filterId: string) => {
     setSelectedFilter(selectedFilter === filterId ? null : filterId);
@@ -79,6 +95,33 @@ const Home = () => {
 
   const handleHostelClick = (hostelId: string) => {
     navigate(`/hosteller/hostel/${hostelId}`);
+  };
+
+  const toggleWishlist = (hostel: any, e: React.MouseEvent) => {
+    e.stopPropagation();
+    
+    // Get current wishlist
+    const storedWishlist = localStorage.getItem("hostelWishlist");
+    let currentWishlist = storedWishlist ? JSON.parse(storedWishlist) : [];
+    
+    // Check if hostel is already in wishlist
+    const isWishlisted = currentWishlist.some((item: any) => item.id === hostel.id);
+    
+    if (isWishlisted) {
+      // Remove from wishlist
+      currentWishlist = currentWishlist.filter((item: any) => item.id !== hostel.id);
+      toast("Removed from wishlist");
+    } else {
+      // Add to wishlist
+      currentWishlist.push(hostel);
+      toast("Added to wishlist");
+    }
+    
+    // Update localStorage
+    localStorage.setItem("hostelWishlist", JSON.stringify(currentWishlist));
+    
+    // Update state
+    setWishlistedHostelIds(currentWishlist.map((item: any) => item.id));
   };
 
   return (
@@ -148,6 +191,16 @@ const Home = () => {
                 <div className="absolute top-2 right-2 bg-white px-2 py-0.5 rounded-full text-xs font-medium text-blue-700 shadow">
                   {hostel.gender === 'boys' ? 'Boys Only' : hostel.gender === 'girls' ? 'Girls Only' : 'Co-ed'}
                 </div>
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  className="absolute top-2 left-2 bg-white/80 rounded-full h-8 w-8"
+                  onClick={(e) => toggleWishlist(hostel, e)}
+                >
+                  <Heart 
+                    className={`h-4 w-4 ${wishlistedHostelIds.includes(hostel.id) ? 'fill-red-500 text-red-500' : 'text-gray-500'}`} 
+                  />
+                </Button>
               </div>
               <CardContent className="p-4">
                 <div className="flex justify-between mb-1">
@@ -201,6 +254,15 @@ const Home = () => {
         >
           <Search className="h-5 w-5" />
           <span className="text-xs mt-1">Explore</span>
+        </Button>
+        
+        <Button 
+          variant="ghost" 
+          className="flex flex-col items-center text-gray-500"
+          onClick={() => navigate("/hosteller/wishlist")}
+        >
+          <Heart className="h-5 w-5" />
+          <span className="text-xs mt-1">Wishlist</span>
         </Button>
         
         <Button 

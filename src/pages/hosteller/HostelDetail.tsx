@@ -1,5 +1,5 @@
 
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
@@ -72,6 +72,24 @@ const HostelDetail = () => {
   const [currentImageIndex, setCurrentImageIndex] = useState(0);
   const [isFavorite, setIsFavorite] = useState(false);
 
+  useEffect(() => {
+    // Check if hostel is in wishlist
+    const checkWishlist = () => {
+      const storedWishlist = localStorage.getItem("hostelWishlist");
+      if (storedWishlist) {
+        try {
+          const parsedWishlist = JSON.parse(storedWishlist);
+          const isWishlisted = parsedWishlist.some((item: any) => item.id === hostelId);
+          setIsFavorite(isWishlisted);
+        } catch (error) {
+          console.error("Error parsing wishlist from localStorage:", error);
+        }
+      }
+    };
+
+    checkWishlist();
+  }, [hostelId]);
+
   const handleNextImage = () => {
     setCurrentImageIndex((prev) => (prev + 1) % hostel.images.length);
   };
@@ -81,8 +99,37 @@ const HostelDetail = () => {
   };
 
   const toggleFavorite = () => {
+    // Get current wishlist
+    const storedWishlist = localStorage.getItem("hostelWishlist");
+    let currentWishlist = storedWishlist ? JSON.parse(storedWishlist) : [];
+    
+    if (isFavorite) {
+      // Remove from wishlist
+      currentWishlist = currentWishlist.filter((item: any) => item.id !== hostelId);
+      toast("Removed from wishlist");
+    } else {
+      // Create simplified hostel object for wishlist
+      const wishlistItem = {
+        id: hostel.id,
+        name: hostel.name,
+        gender: hostel.gender,
+        location: hostel.location,
+        rating: hostel.rating,
+        price: hostel.rooms[0].dailyPrice, // Using the price of the first room type
+        availableBeds: hostel.rooms.reduce((total: number, room: any) => total + room.availableBeds, 0),
+        image: hostel.images[0]
+      };
+      
+      // Add to wishlist
+      currentWishlist.push(wishlistItem);
+      toast("Added to wishlist");
+    }
+    
+    // Update localStorage
+    localStorage.setItem("hostelWishlist", JSON.stringify(currentWishlist));
+    
+    // Update state
     setIsFavorite(!isFavorite);
-    toast(isFavorite ? "Removed from favorites" : "Added to favorites");
   };
 
   const handleShare = () => {
