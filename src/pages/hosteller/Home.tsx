@@ -232,6 +232,15 @@ const Home = () => {
     );
   };
 
+  // Calculate prices with discounts
+  const calculateWeeklyPrice = (dailyPrice: number) => {
+    return (dailyPrice * 7 * 0.9).toFixed(0); // 10% discount for weekly
+  };
+
+  const calculateMonthlyPrice = (dailyPrice: number) => {
+    return (dailyPrice * 30 * 0.8).toFixed(0); // 20% discount for monthly
+  };
+
   return (
     <div className="flex flex-col min-h-screen bg-gray-50">
       {/* Header */}
@@ -334,7 +343,7 @@ const Home = () => {
                 <Button
                   variant="ghost"
                   size="icon"
-                  className="absolute bottom-2 right-2 bg-white/80 rounded-full h-8 w-8"
+                  className="absolute bottom-2 right-2 bg-white/80 rounded-full h-8 w-8 z-10"
                   onClick={(e) => navigateToMap(hostel.mapUrl, e)}
                 >
                   <Navigation className="h-4 w-4 text-blue-600" />
@@ -356,15 +365,19 @@ const Home = () => {
                 {/* Display amenities icons */}
                 {renderAmenityIcons(hostel.amenities)}
                 
-                <div className="flex justify-between items-center mt-2">
+                <div className="flex justify-between items-center">
                   <div className="space-y-1">
                     <div>
                       <span className="text-blue-600 font-medium">₹{hostel.price}</span>
                       <span className="text-gray-500 text-sm">/day</span>
                     </div>
                     <div>
-                      <span className="text-blue-600 font-medium">₹{(hostel.price * 7 * 0.9).toFixed(0)}</span>
+                      <span className="text-blue-600 font-medium">₹{calculateWeeklyPrice(hostel.price)}</span>
                       <span className="text-gray-500 text-sm">/week</span>
+                    </div>
+                    <div>
+                      <span className="text-blue-600 font-medium">₹{calculateMonthlyPrice(hostel.price)}</span>
+                      <span className="text-gray-500 text-sm">/month</span>
                     </div>
                   </div>
                   <div className="text-green-600 text-sm font-medium">
