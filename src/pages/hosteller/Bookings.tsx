@@ -3,7 +3,7 @@ import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useNavigate } from "react-router-dom";
 import { MapPin, Phone, Calendar, Loader2 } from "lucide-react";
-import { supabase } from "@/integrations/supabase/client";
+import { supabase, fromTable, updateTable } from "@/integrations/supabase/client";
 import { toast } from "@/components/ui/sonner";
 import { BookingWithDetails } from "@/types/database";
 import BookingCard, { BookingType } from "@/components/BookingCard";
@@ -39,15 +39,14 @@ const BookingsPage = () => {
     
     try {
       // Fetch all bookings for the current user with hostel and room details
-      // Using type assertion to bypass TypeScript errors
-      const { data, error } = await supabase
-        .from('bookings')
+      // Using type assertion with our helper method
+      const { data, error } = await fromTable<BookingWithDetails>('bookings')
         .select(`
           *,
           hostels:hostel_id (*),
           rooms:room_id (*)
         `)
-        .eq('hosteller_id', userId) as { data: BookingWithDetails[] | null, error: any };
+        .eq('hosteller_id', userId);
       
       if (error) throw error;
       
@@ -118,12 +117,11 @@ const BookingsPage = () => {
     if (!confirm("Are you sure you want to cancel this booking?")) return;
     
     try {
-      // Using type assertion to bypass TypeScript errors
-      const { error } = await supabase
-        .from('bookings')
+      // Using our helper method for updates
+      const { error } = await updateTable('bookings')
         .update({ status: 'cancelled' })
         .eq('id', bookingId)
-        .eq('hosteller_id', userId) as { error: any }; 
+        .eq('hosteller_id', userId);
         
       if (error) throw error;
       
