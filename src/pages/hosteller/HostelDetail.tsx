@@ -6,6 +6,7 @@ import { Card, CardContent } from "@/components/ui/card";
 import { ArrowLeft, MapPin, Star, Heart, Share, Wifi, Coffee, Tv, Camera, Phone, Loader2 } from "lucide-react";
 import { toast } from "@/components/ui/sonner";
 import { supabase } from "@/integrations/supabase/client";
+import { Hostel, Room } from "@/types/database";
 
 const HostelDetail = () => {
   const { hostelId } = useParams<{ hostelId: string }>();
@@ -17,8 +18,10 @@ const HostelDetail = () => {
   const [isFavorite, setIsFavorite] = useState(false);
 
   useEffect(() => {
-    fetchHostelDetails();
-    checkWishlist();
+    if (hostelId) {
+      fetchHostelDetails();
+      checkWishlist();
+    }
   }, [hostelId]);
 
   const fetchHostelDetails = async () => {
@@ -29,7 +32,7 @@ const HostelDetail = () => {
         .from('hostels')
         .select('*')
         .eq('id', hostelId)
-        .single();
+        .single() as { data: Hostel | null, error: any };
       
       if (hostelError) throw hostelError;
       
@@ -37,46 +40,48 @@ const HostelDetail = () => {
       const { data: roomsData, error: roomsError } = await supabase
         .from('rooms')
         .select('*')
-        .eq('hostel_id', hostelId);
+        .eq('hostel_id', hostelId) as { data: Room[] | null, error: any };
         
       if (roomsError) throw roomsError;
       
-      // Format the hostel data with rooms
-      const formattedHostel = {
-        ...hostelData,
-        // Use actual images from Supabase storage if available, otherwise use placeholder images
-        images: hostelData.images && hostelData.images.length > 0 ? 
-                hostelData.images : 
-                [
-                  "https://images.unsplash.com/photo-1555854877-bab0e564b8d5?crop=entropy&cs=tinysrgb&fit=crop&fm=jpg&h=400&ixid=MnwxfDB8MXxyYW5kb218MHx8aG9zdGVsfHx8fHx8MTY4NDc0NjQ5OQ&ixlib=rb-4.0.3&q=80&w=600",
-                  "https://images.unsplash.com/photo-1613977257363-707ba9348227?crop=entropy&cs=tinysrgb&fit=crop&fm=jpg&h=400&ixid=MnwxfDB8MXxyYW5kb218MHx8aG9zdGVsfHx8fHx8MTY4NDc0NjUwMA&ixlib=rb-4.0.3&q=80&w=600",
-                  "https://images.unsplash.com/photo-1626265774643-f1a323ced0ff?crop=entropy&cs=tinysrgb&fit=crop&fm=jpg&h=400&ixid=MnwxfDB8MXxyYW5kb218MHx8aG9zdGVsLHJvb218fHx8fHwxNjg0NzQ2NTc4&ixlib=rb-4.0.3&q=80&w=600"
-                ],
-        rooms: roomsData.map((room: any) => ({
-          id: room.id,
-          type: room.type,
-          dailyPrice: room.pricing_daily,
-          weeklyPrice: room.pricing_weekly,
-          monthlyPrice: room.pricing_monthly,
-          availableBeds: room.beds_available,
-          features: [
-            room.ac ? 'Air Conditioned' : 'Non-AC',
-            `${room.type} Room`,
-            room.type === 'single' ? 'Private Bathroom' : 'Shared Bathroom',
-            'Locker Storage'
-          ]
-        })),
-        // Placeholder data for now
-        rating: 4.7,
-        reviews: 54,
-        landmarks: ["1.2 km from Metro Station", "500m from Market", "2 km from Tech Park"],
-        amenities: ["WiFi", "Common Area", "TV Room", "CCTV", "24/7 Security", "Laundry", "Meals"],
-        fullAddress: hostelData.address && typeof hostelData.address === 'object' ? 
+      if (hostelData) {
+        // Format the hostel data with rooms
+        const formattedHostel = {
+          ...hostelData,
+          // Use actual images from Supabase storage if available, otherwise use placeholder images
+          images: hostelData.images && hostelData.images.length > 0 ? 
+                  hostelData.images : 
+                  [
+                    "https://images.unsplash.com/photo-1555854877-bab0e564b8d5?crop=entropy&cs=tinysrgb&fit=crop&fm=jpg&h=400&ixid=MnwxfDB8MXxyYW5kb218MHx8aG9zdGVsfHx8fHx8MTY4NDc0NjQ5OQ&ixlib=rb-4.0.3&q=80&w=600",
+                    "https://images.unsplash.com/photo-1613977257363-707ba9348227?crop=entropy&cs=tinysrgb&fit=crop&fm=jpg&h=400&ixid=MnwxfDB8MXxyYW5kb218MHx8aG9zdGVsfHx8fHx8MTY4NDc0NjUwMA&ixlib=rb-4.0.3&q=80&w=600",
+                    "https://images.unsplash.com/photo-1626265774643-f1a323ced0ff?crop=entropy&cs=tinysrgb&fit=crop&fm=jpg&h=400&ixid=MnwxfDB8MXxyYW5kb218MHx8aG9zdGVsLHJvb218fHx8fHwxNjg0NzQ2NTc4&ixlib=rb-4.0.3&q=80&w=600"
+                  ],
+          rooms: roomsData ? roomsData.map((room: Room) => ({
+            id: room.id,
+            type: room.type,
+            dailyPrice: room.pricing_daily,
+            weeklyPrice: room.pricing_weekly,
+            monthlyPrice: room.pricing_monthly,
+            availableBeds: room.beds_available,
+            features: [
+              room.ac ? 'Air Conditioned' : 'Non-AC',
+              `${room.type} Room`,
+              room.type === 'single' ? 'Private Bathroom' : 'Shared Bathroom',
+              'Locker Storage'
+            ]
+          })) : [],
+          // Placeholder data for now
+          rating: 4.7,
+          reviews: 54,
+          landmarks: ["1.2 km from Metro Station", "500m from Market", "2 km from Tech Park"],
+          amenities: ["WiFi", "Common Area", "TV Room", "CCTV", "24/7 Security", "Laundry", "Meals"],
+          fullAddress: hostelData.address && typeof hostelData.address === 'object' ? 
                     `${hostelData.address.line1 || ''} ${hostelData.address.line2 || ''}, ${hostelData.address.city || ''}, ${hostelData.address.state || ''} - ${hostelData.address.pincode || ''}` : 
                     'Address not available'
-      };
-      
-      setHostel(formattedHostel);
+        };
+        
+        setHostel(formattedHostel);
+      }
     } catch (error) {
       console.error("Error fetching hostel details:", error);
       toast.error("Failed to load hostel details");
