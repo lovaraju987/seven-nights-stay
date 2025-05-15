@@ -4,7 +4,7 @@ import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Search, MapPin, Star, Filter, User, Calendar, Heart, Navigation, Wifi, Coffee, Wind, Shirt } from "lucide-react";
 import { useNavigate } from "react-router-dom";
-import { toast } from "@/components/ui/use-toast";
+import { toast } from "@/hooks/use-toast";
 
 // Mock data for hostels
 const mockHostels = [
@@ -343,7 +343,7 @@ const Home = () => {
                 <Button
                   variant="ghost"
                   size="icon"
-                  className="absolute bottom-2 right-2 bg-white/80 rounded-full h-8 w-8 z-10"
+                  className="absolute bottom-2 right-2 bg-white rounded-full h-8 w-8"
                   onClick={(e) => navigateToMap(hostel.mapUrl, e)}
                 >
                   <Navigation className="h-4 w-4 text-blue-600" />
