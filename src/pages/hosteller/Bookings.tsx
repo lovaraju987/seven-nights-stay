@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -40,6 +39,7 @@ const BookingsPage = () => {
     
     try {
       // Fetch all bookings for the current user with hostel and room details
+      // Using type assertion to bypass TypeScript errors
       const { data, error } = await supabase
         .from('bookings')
         .select(`
@@ -67,7 +67,7 @@ const BookingsPage = () => {
           paymentStatus: booking.payment_status,
           amount: booking.amount,
           bookingId: booking.id.substring(0, 8).toUpperCase(),
-          beds: 1, // This would need to come from another query if needed
+          beds: booking.rooms ? booking.rooms.beds_total : 1,
           status: booking.status,
           cancelReason: booking.status === 'cancelled' ? 'Cancelled by user' : undefined
         }));
@@ -118,11 +118,12 @@ const BookingsPage = () => {
     if (!confirm("Are you sure you want to cancel this booking?")) return;
     
     try {
+      // Using type assertion to bypass TypeScript errors
       const { error } = await supabase
         .from('bookings')
         .update({ status: 'cancelled' })
         .eq('id', bookingId)
-        .eq('hosteller_id', userId) as { error: any }; // Type assertion
+        .eq('hosteller_id', userId) as { error: any }; 
         
       if (error) throw error;
       

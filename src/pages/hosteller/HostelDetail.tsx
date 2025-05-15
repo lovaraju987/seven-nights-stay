@@ -27,7 +27,7 @@ const HostelDetail = () => {
   const fetchHostelDetails = async () => {
     setLoading(true);
     try {
-      // Fetch hostel details
+      // Fetch hostel details - using type assertion to bypass TypeScript errors
       const { data: hostelData, error: hostelError } = await supabase
         .from('hostels')
         .select('*')
@@ -36,7 +36,7 @@ const HostelDetail = () => {
       
       if (hostelError) throw hostelError;
       
-      // Fetch rooms for this hostel
+      // Fetch rooms for this hostel - using type assertion to bypass TypeScript errors
       const { data: roomsData, error: roomsError } = await supabase
         .from('rooms')
         .select('*')
