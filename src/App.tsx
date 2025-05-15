@@ -25,6 +25,14 @@ import QRStorefront from "./pages/owner/QRStorefront";
 import Analytics from "./pages/owner/Analytics";
 import OwnerProfile from "./pages/owner/OwnerProfile";
 
+// Admin Routes
+import AdminLogin from "./pages/admin/AdminLogin";
+import AdminDashboard from "./pages/admin/AdminDashboard";
+import HostelManagement from "./pages/admin/HostelManagement";
+import UserManagement from "./pages/admin/UserManagement";
+import ComplaintManagement from "./pages/admin/ComplaintManagement";
+import SubscriptionPlans from "./pages/admin/SubscriptionPlans";
+
 const queryClient = new QueryClient();
 
 const App = () => (
@@ -54,6 +62,14 @@ const App = () => (
           <Route path="/owner/qr-storefront/:hostelId" element={<QRStorefront />} />
           <Route path="/owner/analytics" element={<Analytics />} />
           <Route path="/owner/profile" element={<OwnerProfile />} />
+          
+          {/* Admin Routes */}
+          <Route path="/admin/login" element={<AdminLogin />} />
+          <Route path="/admin/dashboard" element={<AdminDashboard />} />
+          <Route path="/admin/hostels" element={<HostelManagement />} />
+          <Route path="/admin/users" element={<UserManagement />} />
+          <Route path="/admin/complaints" element={<ComplaintManagement />} />
+          <Route path="/admin/subscriptions" element={<SubscriptionPlans />} />
           
           {/* Retain Default Routes */}
           <Route path="/index" element={<Index />} />
