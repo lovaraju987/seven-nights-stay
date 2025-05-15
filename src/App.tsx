@@ -33,6 +33,15 @@ import UserManagement from "./pages/admin/UserManagement";
 import ComplaintManagement from "./pages/admin/ComplaintManagement";
 import SubscriptionPlans from "./pages/admin/SubscriptionPlans";
 
+// Agent Routes
+import AgentLogin from "./pages/agent/AgentLogin";
+import AgentDashboard from "./pages/agent/AgentDashboard";
+import AgentAddHostel from "./pages/agent/AgentAddHostel";
+import AgentMyHostels from "./pages/agent/AgentMyHostels";
+import AgentTasks from "./pages/agent/AgentTasks";
+import AgentPerformance from "./pages/agent/AgentPerformance";
+import AgentProfile from "./pages/agent/AgentProfile";
+
 const queryClient = new QueryClient();
 
 const App = () => (
@@ -70,6 +79,15 @@ const App = () => (
           <Route path="/admin/users" element={<UserManagement />} />
           <Route path="/admin/complaints" element={<ComplaintManagement />} />
           <Route path="/admin/subscriptions" element={<SubscriptionPlans />} />
+          
+          {/* Agent Routes */}
+          <Route path="/agent/login" element={<AgentLogin />} />
+          <Route path="/agent/dashboard" element={<AgentDashboard />} />
+          <Route path="/agent/add-hostel" element={<AgentAddHostel />} />
+          <Route path="/agent/my-hostels" element={<AgentMyHostels />} />
+          <Route path="/agent/tasks" element={<AgentTasks />} />
+          <Route path="/agent/performance" element={<AgentPerformance />} />
+          <Route path="/agent/profile" element={<AgentProfile />} />
           
           {/* Retain Default Routes */}
           <Route path="/index" element={<Index />} />

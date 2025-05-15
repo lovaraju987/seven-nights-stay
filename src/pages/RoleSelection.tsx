@@ -3,11 +3,11 @@ import React, { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { Card, CardHeader, CardContent, CardFooter } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { UserIcon, HomeIcon } from "lucide-react";
+import { UserIcon, HomeIcon, UsersRoundIcon } from "lucide-react";
 import { toast } from "@/components/ui/sonner";
 
 const RoleSelection = () => {
-  const [selectedRole, setSelectedRole] = useState<"hosteller" | "owner" | null>(null);
+  const [selectedRole, setSelectedRole] = useState<"hosteller" | "owner" | "agent" | null>(null);
   const navigate = useNavigate();
 
   const handleContinue = () => {
@@ -18,8 +18,10 @@ const RoleSelection = () => {
 
     if (selectedRole === "hosteller") {
       navigate("/login");
-    } else {
+    } else if (selectedRole === "owner") {
       navigate("/owner/login");
+    } else {
+      navigate("/agent/login");
     }
   };
 
@@ -62,6 +64,23 @@ const RoleSelection = () => {
               <div>
                 <h3 className="font-medium">Hostel Owner</h3>
                 <p className="text-sm text-gray-500">I want to manage my hostel</p>
+              </div>
+            </div>
+          </Card>
+          
+          <Card 
+            className={`p-4 cursor-pointer transition-all hover:shadow-md ${
+              selectedRole === "agent" ? "ring-2 ring-blue-500 bg-blue-50" : "bg-white"
+            }`}
+            onClick={() => setSelectedRole("agent")}
+          >
+            <div className="flex items-center gap-3">
+              <div className="p-3 rounded-full bg-blue-100">
+                <UsersRoundIcon className="h-6 w-6 text-blue-600" />
+              </div>
+              <div>
+                <h3 className="font-medium">Relationship Manager</h3>
+                <p className="text-sm text-gray-500">I onboard and manage hostels</p>
               </div>
             </div>
           </Card>
