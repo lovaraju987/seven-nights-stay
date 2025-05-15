@@ -335,7 +335,15 @@ const HostelManagement = () => {
                     </div>
                     <div>
                       <span className="text-sm text-gray-500">Status:</span>
-                      <Badge variant={selectedHostel.status === "active" ? "success" : selectedHostel.status === "pending" ? "outline" : "destructive"}>
+                      <Badge 
+                        variant={
+                          selectedHostel.status === "active" 
+                            ? "success" 
+                            : selectedHostel.status === "pending" 
+                              ? "outline" 
+                              : "destructive"
+                        }
+                      >
                         {selectedHostel.status === "active" ? "Active" : selectedHostel.status === "pending" ? "Pending" : "Inactive"}
                       </Badge>
                     </div>
