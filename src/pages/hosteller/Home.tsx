@@ -1,11 +1,10 @@
-
 import React, { useState, useEffect } from "react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
-import { Search, MapPin, Star, Filter, User, Calendar, Heart } from "lucide-react";
+import { Search, MapPin, Star, Filter, User, Calendar, Heart, Navigation, Wifi, Coffee, Wind, Shirt } from "lucide-react";
 import { useNavigate } from "react-router-dom";
-import { toast } from "@/components/ui/sonner";
+import { toast } from "@/components/ui/use-toast";
 
 // Mock data for hostels
 const mockHostels = [
@@ -24,7 +23,8 @@ const mockHostels = [
       food: true,
       laundry: false,
       cleaning: true
-    }
+    },
+    mapUrl: "https://www.google.com/maps?q=Koramangala,Bangalore"
   },
   {
     id: "2",
@@ -41,7 +41,8 @@ const mockHostels = [
       food: true,
       laundry: true,
       cleaning: false
-    }
+    },
+    mapUrl: "https://www.google.com/maps?q=HSR+Layout,Bangalore"
   },
   {
     id: "3",
@@ -58,7 +59,8 @@ const mockHostels = [
       food: true,
       laundry: true,
       cleaning: true
-    }
+    },
+    mapUrl: "https://www.google.com/maps?q=Indiranagar,Bangalore"
   },
   {
     id: "4",
@@ -75,7 +77,8 @@ const mockHostels = [
       food: false,
       laundry: true,
       cleaning: true
-    }
+    },
+    mapUrl: "https://www.google.com/maps?q=Whitefield,Bangalore"
   }
 ];
 
@@ -174,6 +177,11 @@ const Home = () => {
     navigate(`/hosteller/hostel/${hostelId}`);
   };
 
+  const navigateToMap = (mapUrl: string, e: React.MouseEvent) => {
+    e.stopPropagation();
+    window.open(mapUrl, '_blank');
+  };
+
   const toggleWishlist = (hostel: any, e: React.MouseEvent) => {
     e.stopPropagation();
     
@@ -187,11 +195,15 @@ const Home = () => {
     if (isWishlisted) {
       // Remove from wishlist
       currentWishlist = currentWishlist.filter((item: any) => item.id !== hostel.id);
-      toast("Removed from wishlist");
+      toast({
+        description: "Removed from wishlist"
+      });
     } else {
       // Add to wishlist
       currentWishlist.push(hostel);
-      toast("Added to wishlist");
+      toast({
+        description: "Added to wishlist"
+      });
     }
     
     // Update localStorage
@@ -206,6 +218,18 @@ const Home = () => {
     setSelectedFilter(null);
     setAppliedFilters(null);
     localStorage.removeItem("hostelFilters");
+  };
+
+  // Function to render amenity icons
+  const renderAmenityIcons = (amenities: any) => {
+    return (
+      <div className="flex space-x-2 mb-2">
+        {amenities.wifi && <Wifi className="h-4 w-4 text-blue-500" />}
+        {amenities.food && <Coffee className="h-4 w-4 text-orange-500" />}
+        {amenities.ac && <Wind className="h-4 w-4 text-cyan-500" />}
+        {amenities.laundry && <Shirt className="h-4 w-4 text-purple-500" />}
+      </div>
+    );
   };
 
   return (
@@ -307,6 +331,14 @@ const Home = () => {
                     className={`h-4 w-4 ${wishlistedHostelIds.includes(hostel.id) ? 'fill-red-500 text-red-500' : 'text-gray-500'}`} 
                   />
                 </Button>
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  className="absolute bottom-2 right-2 bg-white/80 rounded-full h-8 w-8"
+                  onClick={(e) => navigateToMap(hostel.mapUrl, e)}
+                >
+                  <Navigation className="h-4 w-4 text-blue-600" />
+                </Button>
               </div>
               <CardContent className="p-4">
                 <div className="flex justify-between mb-1">
@@ -320,10 +352,20 @@ const Home = () => {
                   <MapPin className="h-3.5 w-3.5 mr-1" />
                   {hostel.location}
                 </div>
+                
+                {/* Display amenities icons */}
+                {renderAmenityIcons(hostel.amenities)}
+                
                 <div className="flex justify-between items-center mt-2">
-                  <div>
-                    <span className="text-blue-600 font-medium">₹{hostel.price}</span>
-                    <span className="text-gray-500 text-sm">/day</span>
+                  <div className="space-y-1">
+                    <div>
+                      <span className="text-blue-600 font-medium">₹{hostel.price}</span>
+                      <span className="text-gray-500 text-sm">/day</span>
+                    </div>
+                    <div>
+                      <span className="text-blue-600 font-medium">₹{(hostel.price * 7 * 0.9).toFixed(0)}</span>
+                      <span className="text-gray-500 text-sm">/week</span>
+                    </div>
                   </div>
                   <div className="text-green-600 text-sm font-medium">
                     {hostel.availableBeds} beds available
