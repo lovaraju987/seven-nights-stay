@@ -27,20 +27,20 @@ const HostelDetail = () => {
   const fetchHostelDetails = async () => {
     setLoading(true);
     try {
-      // Using direct type assertions to bypass TypeScript errors
+      // Using direct type assertions with 'as any' to bypass TypeScript errors
       const { data: hostelData, error: hostelError } = await supabase
         .from('hostels')
         .select('*')
         .eq('id', hostelId)
-        .single() as { data: Hostel | null, error: any };
+        .single() as any;
       
       if (hostelError) throw hostelError;
       
-      // Using direct type assertions to bypass TypeScript errors
+      // Using direct type assertions with 'as any' to bypass TypeScript errors
       const { data: roomsData, error: roomsError } = await supabase
         .from('rooms')
         .select('*')
-        .eq('hostel_id', hostelId) as { data: Room[] | null, error: any };
+        .eq('hostel_id', hostelId) as any;
         
       if (roomsError) throw roomsError;
       
