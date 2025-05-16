@@ -14,41 +14,44 @@ export type PostgrestResponse<T> = {
   error: any;
 };
 
+// Define valid table names as a type
+type TableName = 'hostels' | 'rooms' | 'bookings' | 'profiles' | 'wishlist';
+
 // Type-safe wrapper functions
-export function query<T = any>(tableName: string) {
+export function query<T = any>(tableName: TableName) {
   return {
     select: (columns = '*') => {
       const builder = supabase.from(tableName).select(columns);
       return {
         eq: (column: string, value: any) => ({
-          single: () => builder.eq(column, value).single() as Promise<PostgrestResponse<T>>,
-          maybeSingle: () => builder.eq(column, value).maybeSingle() as Promise<PostgrestResponse<T>>,
-          execute: () => builder.eq(column, value) as Promise<PostgrestResponse<T[]>>,
+          single: () => builder.eq(column, value).single() as unknown as Promise<PostgrestResponse<T>>,
+          maybeSingle: () => builder.eq(column, value).maybeSingle() as unknown as Promise<PostgrestResponse<T>>,
+          execute: () => builder.eq(column, value) as unknown as Promise<PostgrestResponse<T[]>>,
         }),
-        execute: () => builder as Promise<PostgrestResponse<T[]>>,
+        execute: () => builder as unknown as Promise<PostgrestResponse<T[]>>,
       };
     },
   };
 }
 
-export function mutate<T = any>(tableName: string) {
+export function mutate<T = any>(tableName: TableName) {
   return {
     update: (values: any) => {
       const builder = supabase.from(tableName).update(values);
       return {
         eq: (column: string, value: any) => ({
-          eq: (col2: string, val2: any) => builder.eq(column, value).eq(col2, val2) as Promise<PostgrestResponse<T[]>>,
-          execute: () => builder.eq(column, value) as Promise<PostgrestResponse<T[]>>,
+          eq: (col2: string, val2: any) => builder.eq(column, value).eq(col2, val2) as unknown as Promise<PostgrestResponse<T[]>>,
+          execute: () => builder.eq(column, value) as unknown as Promise<PostgrestResponse<T[]>>,
         }),
-        execute: () => builder as Promise<PostgrestResponse<T[]>>,
+        execute: () => builder as unknown as Promise<PostgrestResponse<T[]>>,
       };
     },
-    insert: (values: any) => supabase.from(tableName).insert(values) as Promise<PostgrestResponse<T[]>>,
+    insert: (values: any) => supabase.from(tableName).insert(values) as unknown as Promise<PostgrestResponse<T[]>>,
     delete: () => {
       const builder = supabase.from(tableName).delete();
       return {
-        eq: (column: string, value: any) => builder.eq(column, value) as Promise<PostgrestResponse<T[]>>,
-        execute: () => builder as Promise<PostgrestResponse<T[]>>,
+        eq: (column: string, value: any) => builder.eq(column, value) as unknown as Promise<PostgrestResponse<T[]>>,
+        execute: () => builder as unknown as Promise<PostgrestResponse<T[]>>,
       };
     },
   };
