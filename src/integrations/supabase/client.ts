@@ -8,7 +8,7 @@ const SUPABASE_PUBLISHABLE_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiO
 // Create the supabase client
 export const supabase = createClient<Database>(SUPABASE_URL, SUPABASE_PUBLISHABLE_KEY);
 
-// Simplified response type to avoid excessive type instantiation
+// Simplified response type
 export type PostgrestResponse<T> = {
   data: T | null;
   error: any;
@@ -17,7 +17,7 @@ export type PostgrestResponse<T> = {
 // Define valid table names as a type
 export type TableName = 'hostels' | 'rooms' | 'bookings' | 'profiles' | 'wishlist';
 
-// Simplified query functions that avoid complex type chains
+// Simplified query functions
 export const query = <T = any>(tableName: TableName) => {
   return {
     select: (columns = '*') => {
@@ -31,7 +31,10 @@ export const query = <T = any>(tableName: TableName) => {
             async single(): Promise<PostgrestResponse<T>> {
               try {
                 const result = await filtered.single();
-                return { data: result.data as T, error: result.error };
+                return { 
+                  data: result.data as T, 
+                  error: result.error 
+                };
               } catch (error) {
                 return { data: null, error };
               }
@@ -40,7 +43,10 @@ export const query = <T = any>(tableName: TableName) => {
             async maybeSingle(): Promise<PostgrestResponse<T>> {
               try {
                 const result = await filtered.maybeSingle();
-                return { data: result.data as T, error: result.error };
+                return { 
+                  data: result.data as T, 
+                  error: result.error 
+                };
               } catch (error) {
                 return { data: null, error };
               }
@@ -49,7 +55,10 @@ export const query = <T = any>(tableName: TableName) => {
             async execute(): Promise<PostgrestResponse<T[]>> {
               try {
                 const result = await filtered;
-                return { data: result.data as T[], error: result.error };
+                return { 
+                  data: result.data as T[], 
+                  error: result.error 
+                };
               } catch (error) {
                 return { data: null, error };
               }
@@ -60,7 +69,10 @@ export const query = <T = any>(tableName: TableName) => {
         async execute(): Promise<PostgrestResponse<T[]>> {
           try {
             const result = await builder;
-            return { data: result.data as T[], error: result.error };
+            return { 
+              data: result.data as T[], 
+              error: result.error 
+            };
           } catch (error) {
             return { data: null, error };
           }
@@ -83,7 +95,10 @@ export const mutate = <T = any>(tableName: TableName) => {
             eq: async (col2: string, val2: any): Promise<PostgrestResponse<T[]>> => {
               try {
                 const result = await filtered.eq(col2, val2);
-                return { data: result.data as T[], error: result.error };
+                return { 
+                  data: result.data as T[], 
+                  error: result.error 
+                };
               } catch (error) {
                 return { data: null, error };
               }
@@ -92,7 +107,10 @@ export const mutate = <T = any>(tableName: TableName) => {
             async execute(): Promise<PostgrestResponse<T[]>> {
               try {
                 const result = await filtered;
-                return { data: result.data as T[], error: result.error };
+                return { 
+                  data: result.data as T[], 
+                  error: result.error 
+                };
               } catch (error) {
                 return { data: null, error };
               }
@@ -103,7 +121,10 @@ export const mutate = <T = any>(tableName: TableName) => {
         async execute(): Promise<PostgrestResponse<T[]>> {
           try {
             const result = await builder;
-            return { data: result.data as T[], error: result.error };
+            return { 
+              data: result.data as T[], 
+              error: result.error 
+            };
           } catch (error) {
             return { data: null, error };
           }
@@ -114,7 +135,10 @@ export const mutate = <T = any>(tableName: TableName) => {
     insert: async (values: any): Promise<PostgrestResponse<T[]>> => {
       try {
         const result = await supabase.from(tableName).insert(values);
-        return { data: result.data as T[], error: result.error };
+        return { 
+          data: result.data as T[], 
+          error: result.error 
+        };
       } catch (error) {
         return { data: null, error };
       }
@@ -127,7 +151,10 @@ export const mutate = <T = any>(tableName: TableName) => {
         eq: async (column: string, value: any): Promise<PostgrestResponse<T[]>> => {
           try {
             const result = await builder.eq(column, value);
-            return { data: result.data as T[], error: result.error };
+            return { 
+              data: result.data as T[], 
+              error: result.error 
+            };
           } catch (error) {
             return { data: null, error };
           }
@@ -136,7 +163,10 @@ export const mutate = <T = any>(tableName: TableName) => {
         async execute(): Promise<PostgrestResponse<T[]>> {
           try {
             const result = await builder;
-            return { data: result.data as T[], error: result.error };
+            return { 
+              data: result.data as T[], 
+              error: result.error 
+            };
           } catch (error) {
             return { data: null, error };
           }
