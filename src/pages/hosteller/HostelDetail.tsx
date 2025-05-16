@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import { Button } from "@/components/ui/button";
@@ -27,20 +26,18 @@ const HostelDetail = () => {
   const fetchHostelDetails = async () => {
     setLoading(true);
     try {
-      // Using direct type assertions with 'as any' to bypass TypeScript errors
       const { data: hostelData, error: hostelError } = await supabase
         .from('hostels')
         .select('*')
         .eq('id', hostelId)
-        .single() as any;
+        .single();
       
       if (hostelError) throw hostelError;
       
-      // Using direct type assertions with 'as any' to bypass TypeScript errors
       const { data: roomsData, error: roomsError } = await supabase
         .from('rooms')
         .select('*')
-        .eq('hostel_id', hostelId) as any;
+        .eq('hostel_id', hostelId);
         
       if (roomsError) throw roomsError;
       
@@ -90,17 +87,40 @@ const HostelDetail = () => {
     }
   };
 
-  const checkWishlist = () => {
-    // Check if hostel is in wishlist
-    const storedWishlist = localStorage.getItem("hostelWishlist");
-    if (storedWishlist) {
-      try {
-        const parsedWishlist = JSON.parse(storedWishlist);
-        const isWishlisted = parsedWishlist.some((item: any) => item.id === hostelId);
-        setIsFavorite(isWishlisted);
-      } catch (error) {
-        console.error("Error parsing wishlist from localStorage:", error);
+  const checkWishlist = async () => {
+    try {
+      const { data: { user } } = await supabase.auth.getUser();
+      
+      if (user) {
+        // Check if this hostel is in the user's wishlist
+        const { data, error } = await supabase
+          .from('wishlist')
+          .select('*')
+          .eq('hosteller_id', user.id)
+          .eq('hostel_id', hostelId)
+          .single();
+          
+        if (error && error.code !== 'PGRST116') {
+          // PGRST116 is the error code for no rows returned
+          console.error("Error checking wishlist:", error);
+        }
+        
+        setIsFavorite(!!data);
+      } else {
+        // Fallback to localStorage for non-authenticated users
+        const storedWishlist = localStorage.getItem("hostelWishlist");
+        if (storedWishlist) {
+          try {
+            const parsedWishlist = JSON.parse(storedWishlist);
+            const isWishlisted = parsedWishlist.some((item: any) => item.id === hostelId);
+            setIsFavorite(isWishlisted);
+          } catch (error) {
+            console.error("Error parsing wishlist from localStorage:", error);
+          }
+        }
       }
+    } catch (error) {
+      console.error("Error checking wishlist:", error);
     }
   };
 
@@ -114,42 +134,78 @@ const HostelDetail = () => {
     setCurrentImageIndex((prev) => (prev - 1 + hostel.images.length) % hostel.images.length);
   };
 
-  const toggleFavorite = () => {
-    // Get current wishlist
-    const storedWishlist = localStorage.getItem("hostelWishlist");
-    let currentWishlist = storedWishlist ? JSON.parse(storedWishlist) : [];
-    
-    if (isFavorite) {
-      // Remove from wishlist
-      currentWishlist = currentWishlist.filter((item: any) => item.id !== hostelId);
-      toast("Removed from wishlist");
-    } else {
-      // Create simplified hostel object for wishlist
-      const wishlistItem = {
-        id: hostel.id,
-        name: hostel.name,
-        gender: hostel.type,
-        location: hostel.address && typeof hostel.address === 'object' ? 
-                  `${hostel.address.city || ''}, ${hostel.address.state || ''}` : 
-                  'Location not available',
-        rating: hostel.rating,
-        price: hostel.rooms && hostel.rooms.length > 0 ? hostel.rooms[0].dailyPrice : 0,
-        availableBeds: hostel.rooms ? 
-                      hostel.rooms.reduce((total: number, room: any) => total + room.availableBeds, 0) : 
-                      0,
-        image: hostel.images && hostel.images.length > 0 ? hostel.images[0] : ''
-      };
+  const toggleFavorite = async () => {
+    try {
+      const { data: { user } } = await supabase.auth.getUser();
       
-      // Add to wishlist
-      currentWishlist.push(wishlistItem);
-      toast("Added to wishlist");
+      if (user) {
+        if (isFavorite) {
+          // Remove from wishlist
+          const { error } = await supabase
+            .from('wishlist')
+            .delete()
+            .eq('hosteller_id', user.id)
+            .eq('hostel_id', hostelId);
+            
+          if (error) throw error;
+          
+          toast("Removed from wishlist");
+        } else {
+          // Add to wishlist
+          const { error } = await supabase
+            .from('wishlist')
+            .insert({
+              hosteller_id: user.id,
+              hostel_id: hostelId
+            });
+            
+          if (error) throw error;
+          
+          toast("Added to wishlist");
+        }
+        
+        setIsFavorite(!isFavorite);
+      } else {
+        // Fallback to localStorage for non-authenticated users
+        const storedWishlist = localStorage.getItem("hostelWishlist");
+        let currentWishlist = storedWishlist ? JSON.parse(storedWishlist) : [];
+        
+        if (isFavorite) {
+          // Remove from wishlist
+          currentWishlist = currentWishlist.filter((item: any) => item.id !== hostelId);
+          toast("Removed from wishlist");
+        } else {
+          // Create simplified hostel object for wishlist
+          const wishlistItem = {
+            id: hostel.id,
+            name: hostel.name,
+            gender: hostel.type,
+            location: hostel.address && typeof hostel.address === 'object' ? 
+                      `${hostel.address.city || ''}, ${hostel.address.state || ''}` : 
+                      'Location not available',
+            rating: hostel.rating,
+            price: hostel.rooms && hostel.rooms.length > 0 ? hostel.rooms[0].dailyPrice : 0,
+            availableBeds: hostel.rooms ? 
+                          hostel.rooms.reduce((total: number, room: any) => total + room.availableBeds, 0) : 
+                          0,
+            image: hostel.images && hostel.images.length > 0 ? hostel.images[0] : ''
+          };
+          
+          // Add to wishlist
+          currentWishlist.push(wishlistItem);
+          toast("Added to wishlist");
+        }
+        
+        // Update localStorage
+        localStorage.setItem("hostelWishlist", JSON.stringify(currentWishlist));
+        
+        // Update state
+        setIsFavorite(!isFavorite);
+      }
+    } catch (error) {
+      console.error("Error updating wishlist:", error);
+      toast.error("Failed to update wishlist");
     }
-    
-    // Update localStorage
-    localStorage.setItem("hostelWishlist", JSON.stringify(currentWishlist));
-    
-    // Update state
-    setIsFavorite(!isFavorite);
   };
 
   const handleShare = () => {

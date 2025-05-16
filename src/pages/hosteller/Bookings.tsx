@@ -3,7 +3,7 @@ import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useNavigate } from "react-router-dom";
 import { MapPin, Phone, Calendar, Loader2 } from "lucide-react";
-import { supabase, query, mutate } from "@/integrations/supabase/client";
+import { supabase, authHelpers } from "@/integrations/supabase/client";
 import { toast } from "@/components/ui/sonner";
 import { BookingWithDetails } from "@/types/database";
 import BookingCard, { BookingType } from "@/components/BookingCard";
@@ -20,7 +20,7 @@ const BookingsPage = () => {
   useEffect(() => {
     // Check if user is authenticated and get their ID
     const checkAuth = async () => {
-      const { data: { user } } = await supabase.auth.getUser();
+      const { data: { user } } = await authHelpers.getUser();
       if (user) {
         setUserId(user.id);
         fetchBookings(user.id);
@@ -38,7 +38,7 @@ const BookingsPage = () => {
     setLoading(true);
     
     try {
-      // Direct call to supabase with "as any" assertion to bypass type checking
+      // Direct call to supabase with proper typing
       const { data, error } = await supabase
         .from('bookings')
         .select(`
@@ -46,7 +46,7 @@ const BookingsPage = () => {
           hostels:hostel_id (*),
           rooms:room_id (*)
         `)
-        .eq('hosteller_id', userId) as any;
+        .eq('hosteller_id', userId);
       
       if (error) throw error;
       
@@ -117,12 +117,11 @@ const BookingsPage = () => {
     if (!confirm("Are you sure you want to cancel this booking?")) return;
     
     try {
-      // Using direct assertion to bypass TypeScript errors
       const { error } = await supabase
         .from('bookings')
         .update({ status: 'cancelled' })
         .eq('id', bookingId)
-        .eq('hosteller_id', userId) as any;
+        .eq('hosteller_id', userId);
         
       if (error) throw error;
       
