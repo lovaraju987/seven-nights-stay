@@ -8,7 +8,7 @@ const SUPABASE_PUBLISHABLE_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiO
 // Create the supabase client
 export const supabase = createClient<Database>(SUPABASE_URL, SUPABASE_PUBLISHABLE_KEY);
 
-// Helper types for better type inference in components
+// Helper types for Postgrest responses
 export type PostgrestResponse<T> = {
   data: T | null;
   error: any;
@@ -17,65 +17,94 @@ export type PostgrestResponse<T> = {
 // Define valid table names as a type
 export type TableName = 'hostels' | 'rooms' | 'bookings' | 'profiles' | 'wishlist';
 
-// Type-safe wrapper functions - simplified to avoid excessive type instantiation
-export function query<T = any>(tableName: TableName) {
+// Simplified query functions to avoid excessive type instantiation
+export const query = <T = any>(tableName: TableName) => {
   return {
     select: (columns = '*') => {
       const builder = supabase.from(tableName).select(columns);
+      
       return {
-        eq: (column: string, value: any) => ({
-          single: async (): Promise<PostgrestResponse<T>> => {
-            return await builder.eq(column, value).single();
-          },
-          maybeSingle: async (): Promise<PostgrestResponse<T>> => {
-            return await builder.eq(column, value).maybeSingle();
-          },
-          execute: async (): Promise<PostgrestResponse<T[]>> => {
-            return await builder.eq(column, value);
-          },
-        }),
-        execute: async (): Promise<PostgrestResponse<T[]>> => {
-          return await builder;
+        eq: (column: string, value: any) => {
+          const filtered = builder.eq(column, value);
+          
+          return {
+            async single(): Promise<PostgrestResponse<T>> {
+              const result = await filtered.single();
+              return { data: result.data as T | null, error: result.error };
+            },
+            
+            async maybeSingle(): Promise<PostgrestResponse<T>> {
+              const result = await filtered.maybeSingle();
+              return { data: result.data as T | null, error: result.error };
+            },
+            
+            async execute(): Promise<PostgrestResponse<T[]>> {
+              const result = await filtered;
+              return { data: result.data as T[] | null, error: result.error };
+            }
+          };
         },
+        
+        async execute(): Promise<PostgrestResponse<T[]>> {
+          const result = await builder;
+          return { data: result.data as T[] | null, error: result.error };
+        }
       };
-    },
+    }
   };
-}
+};
 
-export function mutate<T = any>(tableName: TableName) {
+export const mutate = <T = any>(tableName: TableName) => {
   return {
     update: (values: any) => {
       const builder = supabase.from(tableName).update(values);
+      
       return {
-        eq: (column: string, value: any) => ({
-          eq: async (col2: string, val2: any): Promise<PostgrestResponse<T[]>> => {
-            return await builder.eq(column, value).eq(col2, val2);
-          },
-          execute: async (): Promise<PostgrestResponse<T[]>> => {
-            return await builder.eq(column, value);
-          },
-        }),
-        execute: async (): Promise<PostgrestResponse<T[]>> => {
-          return await builder;
+        eq: (column: string, value: any) => {
+          const filtered = builder.eq(column, value);
+          
+          return {
+            eq: async (col2: string, val2: any): Promise<PostgrestResponse<T[]>> => {
+              const result = await filtered.eq(col2, val2);
+              return { data: result.data as T[] | null, error: result.error };
+            },
+            
+            async execute(): Promise<PostgrestResponse<T[]>> {
+              const result = await filtered;
+              return { data: result.data as T[] | null, error: result.error };
+            }
+          };
         },
+        
+        async execute(): Promise<PostgrestResponse<T[]>> {
+          const result = await builder;
+          return { data: result.data as T[] | null, error: result.error };
+        }
       };
     },
+    
     insert: async (values: any): Promise<PostgrestResponse<T[]>> => {
-      return await supabase.from(tableName).insert(values);
+      const result = await supabase.from(tableName).insert(values);
+      return { data: result.data as T[] | null, error: result.error };
     },
+    
     delete: () => {
       const builder = supabase.from(tableName).delete();
+      
       return {
         eq: async (column: string, value: any): Promise<PostgrestResponse<T[]>> => {
-          return await builder.eq(column, value);
+          const result = await builder.eq(column, value);
+          return { data: result.data as T[] | null, error: result.error };
         },
-        execute: async (): Promise<PostgrestResponse<T[]>> => {
-          return await builder;
-        },
+        
+        async execute(): Promise<PostgrestResponse<T[]>> {
+          const result = await builder;
+          return { data: result.data as T[] | null, error: result.error };
+        }
       };
-    },
+    }
   };
-}
+};
 
 // Auth helpers
 export const authHelpers = {
