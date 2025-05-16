@@ -5,7 +5,7 @@ import { useNavigate } from "react-router-dom";
 import { MapPin, Phone, Calendar, Loader2 } from "lucide-react";
 import { supabase, authHelpers } from "@/integrations/supabase/client";
 import { toast } from "@/components/ui/sonner";
-import { BookingWithDetails } from "@/types/database";
+import { BookingWithDetails, parseHostelAddress } from "@/types/database";
 import BookingCard, { BookingType } from "@/components/BookingCard";
 
 const BookingsPage = () => {
@@ -52,24 +52,32 @@ const BookingsPage = () => {
       
       if (data) {
         // Format the data for the UI and separate into categories
-        const formattedData: BookingType[] = data.map(booking => ({
-          id: booking.id,
-          hostelId: booking.hostel_id,
-          hostelName: booking.hostels ? booking.hostels.name : 'Unknown Hostel',
-          roomType: booking.rooms ? booking.rooms.type : 'Unknown Room',
-          location: booking.hostels && booking.hostels.address ? 
-            (typeof booking.hostels.address === 'object' ? 
-            `${booking.hostels.address.city || ''}, ${booking.hostels.address.state || ''}` : 
-            'Unknown Location') : 'Unknown Location',
-          checkIn: booking.start_date,
-          checkOut: booking.end_date,
-          paymentStatus: booking.payment_status,
-          amount: booking.amount,
-          bookingId: booking.id.substring(0, 8).toUpperCase(),
-          beds: booking.rooms ? booking.rooms.beds_total : 1,
-          status: booking.status,
-          cancelReason: booking.status === 'cancelled' ? 'Cancelled by user' : undefined
-        }));
+        const formattedData: BookingType[] = data.map(booking => {
+          // Parse the address safely
+          const hotelAddress = booking.hostels?.address 
+            ? parseHostelAddress(booking.hostels.address)
+            : {};
+          
+          const locationString = hotelAddress.city && hotelAddress.state 
+            ? `${hotelAddress.city}, ${hotelAddress.state}` 
+            : 'Unknown Location';
+            
+          return {
+            id: booking.id,
+            hostelId: booking.hostel_id,
+            hostelName: booking.hostels ? booking.hostels.name : 'Unknown Hostel',
+            roomType: booking.rooms ? booking.rooms.type : 'Unknown Room',
+            location: locationString,
+            checkIn: booking.start_date,
+            checkOut: booking.end_date,
+            paymentStatus: booking.payment_status,
+            amount: booking.amount,
+            bookingId: booking.id.substring(0, 8).toUpperCase(),
+            beds: booking.rooms ? booking.rooms.beds_total : 1,
+            status: booking.status,
+            cancelReason: booking.status === 'cancelled' ? 'Cancelled by user' : undefined
+          };
+        });
         
         // Filter bookings by status
         const upcoming = formattedData.filter(booking => 
@@ -103,7 +111,7 @@ const BookingsPage = () => {
     const date = new Date(dateStr);
     return date.toLocaleDateString('en-US', { day: 'numeric', month: 'short', year: 'numeric' });
   };
-  
+
   // Calculate nights between two dates
   const calculateNights = (checkIn: string, checkOut: string) => {
     const start = new Date(checkIn);

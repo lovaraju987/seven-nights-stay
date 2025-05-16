@@ -1,4 +1,6 @@
 
+import { Json } from '@/integrations/supabase/types';
+
 // Custom types for our database schema
 export type Profile = {
   id: string;
@@ -11,18 +13,20 @@ export type Profile = {
   created_at: string;
 };
 
+export type HostelAddress = {
+  line1?: string;
+  line2?: string;
+  city?: string;
+  state?: string;
+  pincode?: string;
+};
+
 export type Hostel = {
   id: string;
   name: string;
   type: 'boys' | 'girls' | 'coed';
   description: string;
-  address: {
-    line1?: string;
-    line2?: string;
-    city?: string;
-    state?: string;
-    pincode?: string;
-  };
+  address: HostelAddress;
   lat?: number;
   lng?: number;
   owner_id?: string;
@@ -68,6 +72,31 @@ export type Booking = {
   status: 'confirmed' | 'cancelled' | 'completed';
   created_at: string;
 };
+
+// Type guard to check if a value is a HostelAddress
+export function isHostelAddress(value: any): value is HostelAddress {
+  return value 
+    && typeof value === 'object' 
+    && !Array.isArray(value)
+    && ('line1' in value || 'city' in value || 'state' in value);
+}
+
+// Helper function to safely parse address from JSON data
+export function parseHostelAddress(address: Json | null): HostelAddress {
+  if (!address) return {};
+  
+  if (typeof address === 'object' && !Array.isArray(address)) {
+    return {
+      line1: typeof address.line1 === 'string' ? address.line1 : undefined,
+      line2: typeof address.line2 === 'string' ? address.line2 : undefined,
+      city: typeof address.city === 'string' ? address.city : undefined,
+      state: typeof address.state === 'string' ? address.state : undefined,
+      pincode: typeof address.pincode === 'string' ? address.pincode : undefined,
+    };
+  }
+  
+  return {};
+}
 
 // Join types for fetching related data
 export type BookingWithDetails = Booking & {

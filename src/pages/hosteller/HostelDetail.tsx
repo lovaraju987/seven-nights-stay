@@ -5,7 +5,7 @@ import { Card, CardContent } from "@/components/ui/card";
 import { ArrowLeft, MapPin, Star, Heart, Share, Wifi, Coffee, Tv, Camera, Phone, Loader2 } from "lucide-react";
 import { toast } from "@/components/ui/sonner";
 import { supabase } from "@/integrations/supabase/client";
-import { Hostel, Room } from "@/types/database";
+import { Hostel, Room, parseHostelAddress } from "@/types/database";
 
 const HostelDetail = () => {
   const { hostelId } = useParams<{ hostelId: string }>();
@@ -42,9 +42,13 @@ const HostelDetail = () => {
       if (roomsError) throw roomsError;
       
       if (hostelData) {
+        // Parse the address from JSON
+        const address = parseHostelAddress(hostelData.address);
+        
         // Format the hostel data with rooms
         const formattedHostel = {
           ...hostelData,
+          address,
           // Use actual images from Supabase storage if available, otherwise use placeholder images
           images: hostelData.images && hostelData.images.length > 0 ? 
                   hostelData.images : 
@@ -53,9 +57,9 @@ const HostelDetail = () => {
                     "https://images.unsplash.com/photo-1613977257363-707ba9348227?crop=entropy&cs=tinysrgb&fit=crop&fm=jpg&h=400&ixid=MnwxfDB8MXxyYW5kb218MHx8aG9zdGVsfHx8fHx8MTY4NDc0NjUwMA&ixlib=rb-4.0.3&q=80&w=600",
                     "https://images.unsplash.com/photo-1626265774643-f1a323ced0ff?crop=entropy&cs=tinysrgb&fit=crop&fm=jpg&h=400&ixid=MnwxfDB8MXxyYW5kb218MHx8aG9zdGVsLHJvb218fHx8fHwxNjg0NzQ2NTc4&ixlib=rb-4.0.3&q=80&w=600"
                   ],
-          rooms: roomsData ? roomsData.map((room: Room) => ({
+          rooms: roomsData ? roomsData.map((room: any) => ({
             id: room.id,
-            type: room.type,
+            type: room.type as 'single' | 'double' | 'triple' | 'quad',
             dailyPrice: room.pricing_daily,
             weeklyPrice: room.pricing_weekly,
             monthlyPrice: room.pricing_monthly,
@@ -72,8 +76,8 @@ const HostelDetail = () => {
           reviews: 54,
           landmarks: ["1.2 km from Metro Station", "500m from Market", "2 km from Tech Park"],
           amenities: ["WiFi", "Common Area", "TV Room", "CCTV", "24/7 Security", "Laundry", "Meals"],
-          fullAddress: hostelData.address && typeof hostelData.address === 'object' ? 
-                    `${hostelData.address.line1 || ''} ${hostelData.address.line2 || ''}, ${hostelData.address.city || ''}, ${hostelData.address.state || ''} - ${hostelData.address.pincode || ''}` : 
+          fullAddress: address ? 
+                    `${address.line1 || ''} ${address.line2 || ''}, ${address.city || ''}, ${address.state || ''} - ${address.pincode || ''}` : 
                     'Address not available'
         };
         
@@ -180,7 +184,7 @@ const HostelDetail = () => {
             id: hostel.id,
             name: hostel.name,
             gender: hostel.type,
-            location: hostel.address && typeof hostel.address === 'object' ? 
+            location: hostel.address && (hostel.address.city || hostel.address.state) ? 
                       `${hostel.address.city || ''}, ${hostel.address.state || ''}` : 
                       'Location not available',
             rating: hostel.rating,
@@ -292,7 +296,7 @@ const HostelDetail = () => {
             <div className="flex items-center text-sm text-gray-600">
               <MapPin className="h-4 w-4 mr-1" />
               <span>
-                {hostel.address && typeof hostel.address === 'object' ? 
+                {hostel.address && (hostel.address.city || hostel.address.state) ? 
                   `${hostel.address.city || ''}, ${hostel.address.state || ''}` : 
                   'Location not available'}
               </span>
