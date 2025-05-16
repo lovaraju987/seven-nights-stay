@@ -13,6 +13,7 @@ export type Profile = {
   created_at: string;
 };
 
+// Modified to include index signature for Json compatibility
 export interface HostelAddress {
   line1?: string;
   line2?: string;
