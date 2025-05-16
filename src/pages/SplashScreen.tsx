@@ -16,10 +16,10 @@ const SplashScreen = () => {
   }, [navigate]);
 
   return (
-    <div className="flex flex-col items-center justify-center min-h-screen bg-gradient-to-b from-blue-50 to-blue-100">
-      <div className="relative mb-8">
+    <div className="flex flex-col items-center justify-center min-h-screen bg-gradient-to-b from-blue-50 to-blue-100 px-4">
+      <div className="relative mb-8 w-full max-w-md text-center">
         <div className="absolute inset-0 animate-pulse bg-blue-200 rounded-full -z-10"></div>
-        <div className="text-6xl font-bold text-blue-600">
+        <div className="text-4xl sm:text-6xl font-bold text-blue-600">
           <span className="text-blue-800">OneTo7</span> Hostels
         </div>
       </div>

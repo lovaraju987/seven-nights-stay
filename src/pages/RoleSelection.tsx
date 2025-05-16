@@ -33,7 +33,7 @@ const RoleSelection = () => {
           <p className="text-gray-500 text-sm">Select your role to proceed</p>
         </CardHeader>
         
-        <CardContent className="grid gap-4">
+        <CardContent className="grid gap-4 px-4">
           <Card 
             className={`p-4 cursor-pointer transition-all hover:shadow-md ${
               selectedRole === "hosteller" ? "ring-2 ring-blue-500 bg-blue-50" : "bg-white"
@@ -41,12 +41,12 @@ const RoleSelection = () => {
             onClick={() => setSelectedRole("hosteller")}
           >
             <div className="flex items-center gap-3">
-              <div className="p-3 rounded-full bg-blue-100">
-                <UserIcon className="h-6 w-6 text-blue-600" />
+              <div className="p-2 sm:p-3 rounded-full bg-blue-100 flex-shrink-0">
+                <UserIcon className="h-5 w-5 sm:h-6 sm:w-6 text-blue-600" />
               </div>
-              <div>
+              <div className="min-w-0">
                 <h3 className="font-medium">Hosteller</h3>
-                <p className="text-sm text-gray-500">I want to find and book hostels</p>
+                <p className="text-xs sm:text-sm text-gray-500 truncate">I want to find and book hostels</p>
               </div>
             </div>
           </Card>
@@ -58,12 +58,12 @@ const RoleSelection = () => {
             onClick={() => setSelectedRole("owner")}
           >
             <div className="flex items-center gap-3">
-              <div className="p-3 rounded-full bg-blue-100">
-                <HomeIcon className="h-6 w-6 text-blue-600" />
+              <div className="p-2 sm:p-3 rounded-full bg-blue-100 flex-shrink-0">
+                <HomeIcon className="h-5 w-5 sm:h-6 sm:w-6 text-blue-600" />
               </div>
-              <div>
+              <div className="min-w-0">
                 <h3 className="font-medium">Hostel Owner</h3>
-                <p className="text-sm text-gray-500">I want to manage my hostel</p>
+                <p className="text-xs sm:text-sm text-gray-500 truncate">I want to manage my hostel</p>
               </div>
             </div>
           </Card>
@@ -75,18 +75,18 @@ const RoleSelection = () => {
             onClick={() => setSelectedRole("agent")}
           >
             <div className="flex items-center gap-3">
-              <div className="p-3 rounded-full bg-blue-100">
-                <UsersRoundIcon className="h-6 w-6 text-blue-600" />
+              <div className="p-2 sm:p-3 rounded-full bg-blue-100 flex-shrink-0">
+                <UsersRoundIcon className="h-5 w-5 sm:h-6 sm:w-6 text-blue-600" />
               </div>
-              <div>
+              <div className="min-w-0">
                 <h3 className="font-medium">Relationship Manager</h3>
-                <p className="text-sm text-gray-500">I onboard and manage hostels</p>
+                <p className="text-xs sm:text-sm text-gray-500 truncate">I onboard and manage hostels</p>
               </div>
             </div>
           </Card>
         </CardContent>
         
-        <CardFooter>
+        <CardFooter className="px-4 pb-4">
           <Button 
             className="w-full" 
             onClick={handleContinue}

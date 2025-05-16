@@ -8,7 +8,7 @@ const SUPABASE_PUBLISHABLE_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiO
 // Create the supabase client
 export const supabase = createClient<Database>(SUPABASE_URL, SUPABASE_PUBLISHABLE_KEY);
 
-// Simplified response type that avoids deep type instantiation
+// Simple response type to avoid deep type instantiation
 export type PostgrestResponse<T> = {
   data: T | null;
   error: any;
@@ -17,7 +17,7 @@ export type PostgrestResponse<T> = {
 // Define valid table names as a type
 export type TableName = 'hostels' | 'rooms' | 'bookings' | 'profiles' | 'wishlist';
 
-// Simplified query functions that avoid nested generics
+// Simplified query functions to avoid excessive type nesting
 export const query = <T = any>(tableName: TableName) => {
   return {
     select: (columns = '*') => {

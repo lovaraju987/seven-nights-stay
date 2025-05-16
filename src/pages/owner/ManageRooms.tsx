@@ -180,14 +180,14 @@ const ManageRooms = () => {
     : rooms.filter(room => room.type.toLowerCase().includes(activeTab));
 
   return (
-    <div className="container mx-auto px-4 py-6 max-w-6xl">
-      <div className="flex flex-col md:flex-row justify-between items-start md:items-center mb-6">
+    <div className="container px-4 py-4 md:py-6 max-w-6xl mx-auto">
+      <div className="flex flex-col md:flex-row justify-between items-start md:items-center mb-4 md:mb-6">
         <div>
-          <h1 className="text-2xl font-bold mb-1">Manage Rooms for Hostel</h1>
-          <p className="text-gray-500">Add, edit or remove rooms and manage their details</p>
+          <h1 className="text-xl md:text-2xl font-bold mb-1">Manage Rooms for Hostel</h1>
+          <p className="text-gray-500 text-sm">Add, edit or remove rooms and manage their details</p>
         </div>
         <Button 
-          className="mt-4 md:mt-0"
+          className="mt-3 md:mt-0"
           onClick={() => setIsAddRoomDialogOpen(true)}
         >
           <PlusIcon className="mr-2 h-4 w-4" />
@@ -195,9 +195,9 @@ const ManageRooms = () => {
         </Button>
       </div>
       
-      <div className="mb-6">
+      <div className="mb-4 md:mb-6">
         <Tabs defaultValue="all" value={activeTab} onValueChange={setActiveTab} className="w-full">
-          <TabsList className="mb-4 w-full md:w-auto">
+          <TabsList className="mb-4 w-full overflow-auto flex whitespace-nowrap">
             <TabsTrigger value="all">All Rooms</TabsTrigger>
             <TabsTrigger value="single">Single</TabsTrigger>
             <TabsTrigger value="twin">Twin</TabsTrigger>
@@ -223,7 +223,7 @@ const ManageRooms = () => {
                 </CardContent>
               </Card>
             ) : (
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
                 {filteredRooms.map(room => (
                   <Card key={room.id} className="overflow-hidden">
                     <div className="aspect-video relative bg-muted">
@@ -245,10 +245,10 @@ const ManageRooms = () => {
                     <CardHeader className="pb-2">
                       <div className="flex justify-between items-start">
                         <div>
-                          <CardTitle className="text-lg">{room.name}</CardTitle>
+                          <CardTitle className="text-base md:text-lg">{room.name}</CardTitle>
                           <CardDescription>{room.type} • {room.capacity} Person</CardDescription>
                         </div>
-                        <p className="font-bold text-lg">₹{room.price}</p>
+                        <p className="font-bold text-base md:text-lg">₹{room.price}</p>
                       </div>
                     </CardHeader>
                     <CardContent className="pb-0">
@@ -294,7 +294,7 @@ const ManageRooms = () => {
       
       {/* Add Room Dialog */}
       <Dialog open={isAddRoomDialogOpen} onOpenChange={setIsAddRoomDialogOpen}>
-        <DialogContent className="sm:max-w-[425px] md:max-w-[600px]">
+        <DialogContent className="sm:max-w-[425px] md:max-w-[600px] max-h-[90vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle>Add New Room</DialogTitle>
             <DialogDescription>
@@ -370,18 +370,18 @@ const ManageRooms = () => {
               />
             </div>
           </div>
-          <DialogFooter>
+          <DialogFooter className="flex flex-col sm:flex-row gap-2">
             <DialogClose asChild>
-              <Button variant="outline">Cancel</Button>
+              <Button variant="outline" className="w-full sm:w-auto">Cancel</Button>
             </DialogClose>
-            <Button onClick={handleAddRoom}>Add Room</Button>
+            <Button onClick={handleAddRoom} className="w-full sm:w-auto">Add Room</Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
       
       {/* Edit Room Dialog */}
       <Dialog open={!!editingRoom} onOpenChange={(open) => !open && setEditingRoom(null)}>
-        <DialogContent className="sm:max-w-[425px] md:max-w-[600px]">
+        <DialogContent className="sm:max-w-[425px] md:max-w-[600px] max-h-[90vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle>Edit Room</DialogTitle>
             <DialogDescription>
@@ -456,29 +456,29 @@ const ManageRooms = () => {
               </div>
             </div>
           )}
-          <DialogFooter>
+          <DialogFooter className="flex flex-col sm:flex-row gap-2">
             <DialogClose asChild>
-              <Button variant="outline">Cancel</Button>
+              <Button variant="outline" className="w-full sm:w-auto">Cancel</Button>
             </DialogClose>
-            <Button onClick={handleEditRoom}>Save Changes</Button>
+            <Button onClick={handleEditRoom} className="w-full sm:w-auto">Save Changes</Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
       
       {/* Delete Confirmation Dialog */}
       <Dialog open={isDeleteDialogOpen} onOpenChange={setIsDeleteDialogOpen}>
-        <DialogContent>
+        <DialogContent className="max-w-[425px]">
           <DialogHeader>
             <DialogTitle>Confirm Deletion</DialogTitle>
             <DialogDescription>
               Are you sure you want to delete this room? This action cannot be undone.
             </DialogDescription>
           </DialogHeader>
-          <DialogFooter>
+          <DialogFooter className="flex flex-col sm:flex-row gap-2">
             <DialogClose asChild>
-              <Button variant="outline">Cancel</Button>
+              <Button variant="outline" className="w-full sm:w-auto">Cancel</Button>
             </DialogClose>
-            <Button variant="destructive" onClick={handleDeleteRoom}>Delete</Button>
+            <Button variant="destructive" onClick={handleDeleteRoom} className="w-full sm:w-auto">Delete</Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
