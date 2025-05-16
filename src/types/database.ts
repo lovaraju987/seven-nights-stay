@@ -13,13 +13,14 @@ export type Profile = {
   created_at: string;
 };
 
-export type HostelAddress = {
+export interface HostelAddress {
   line1?: string;
   line2?: string;
   city?: string;
   state?: string;
   pincode?: string;
-};
+  [key: string]: string | undefined; // Add index signature to make it compatible with Json
+}
 
 export type Hostel = {
   id: string;

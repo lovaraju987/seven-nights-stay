@@ -12,9 +12,10 @@ import { toast } from "@/components/ui/sonner";
 import { Loader2, Save, ArrowLeft, MapPin, PlusCircle, Image, Trash2 } from "lucide-react";
 import { useNavigate, useParams } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
-import { Hostel, parseHostelAddress } from "@/types/database";
+import { Hostel, HostelAddress, parseHostelAddress } from "@/types/database";
 
-interface Address {
+// Make sure Address interface matches the HostelAddress interface in database.ts
+interface Address extends HostelAddress {
   line1: string;
   line2: string;
   city: string;
@@ -201,15 +202,23 @@ const ManageHostel = () => {
     setIsSaving(true);
     
     try {
+      // Convert the Address to a format compatible with Json type
+      const addressData: HostelAddress = {
+        line1: formData.address.line1,
+        line2: formData.address.line2,
+        city: formData.address.city,
+        state: formData.address.state,
+        pincode: formData.address.pincode,
+      };
+      
       const { error } = await supabase
         .from('hostels')
         .update({
           name: formData.name,
           type: formData.type,
           description: formData.description,
-          address: formData.address,
+          address: addressData,
           status: formData.status,
-          // Don't update images here, handled separately
         })
         .eq('id', hostelId);
 
