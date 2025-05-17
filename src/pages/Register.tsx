@@ -43,6 +43,15 @@ const Register = () => {
         role,
       });
       toast.success("Registration successful! Check your email for confirmation.");
+
+      // Redirect based on role
+      if (role === "owner") {
+        navigate("/owner/login");
+      } else if (role === "agent") {
+        navigate("/agent/login");
+      } else {
+        navigate("/login");
+      }
     }
 
     setLoading(false);
