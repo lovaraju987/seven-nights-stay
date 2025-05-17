@@ -36,22 +36,32 @@ const Register = () => {
       return;
     }
 
-    if (data.user) {
+    // Fallback: Get session to retrieve user ID
+    let userId = data.user?.id;
+    if (!userId) {
+      const session = (await supabase.auth.getSession()).data.session;
+      userId = session?.user?.id;
+    }
+
+    if (userId) {
       await supabase.from("profiles").upsert({
-        id: data.user.id,
+        id: userId,
         name: fullName,
         role,
       });
-      toast.success("Registration successful! Check your email for confirmation.");
+    }
 
-      // Redirect based on role
-      if (role === "owner") {
-        navigate("/owner/login");
-      } else if (role === "agent") {
-        navigate("/agent/login");
-      } else {
-        navigate("/login");
-      }
+    toast.success("Registration successful! Check your email for confirmation.");
+
+    // Redirect based on role
+    if (role === "owner") {
+      navigate("/owner/login");
+    } else if (role === "agent") {
+      navigate("/agent/login");
+    } else if (role === "admin") {
+      navigate("/admin/login");
+    } else {
+      navigate("/login");
     }
 
     setLoading(false);
@@ -82,6 +92,8 @@ const Register = () => {
             <option value="hosteller">Hosteller</option>
             <option value="owner">Owner</option>
             <option value="agent">Agent</option>
+            <option value="admin">Admin</option> {/* ✅ Add this line */}
+
           </select>
         </CardContent>
 

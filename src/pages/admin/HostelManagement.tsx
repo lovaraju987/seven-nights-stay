@@ -1,5 +1,4 @@
-
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import AdminLayout from "@/components/admin/AdminLayout";
 import { Button } from "@/components/ui/button";
@@ -26,67 +25,7 @@ import {
 } from "lucide-react";
 import { toast } from "@/components/ui/sonner";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
-
-// Mock hostel data
-const pendingHostels = [
-  {
-    id: "h1",
-    name: "Royal Boys Hostel",
-    owner: "Rajesh Kumar",
-    type: "Boys",
-    location: "Koramangala, Bangalore",
-    submittedOn: "2025-05-10",
-    status: "pending",
-  },
-  {
-    id: "h2",
-    name: "Sunshine Girls PG",
-    owner: "Priya Sharma",
-    type: "Girls",
-    location: "HSR Layout, Bangalore",
-    submittedOn: "2025-05-12",
-    status: "pending",
-  },
-  {
-    id: "h3",
-    name: "Elite Co-Living Space",
-    owner: "Amit Verma",
-    type: "Co-ed",
-    location: "Indiranagar, Bangalore",
-    submittedOn: "2025-05-14",
-    status: "pending",
-  },
-];
-
-const verifiedHostels = [
-  {
-    id: "h4",
-    name: "Student Haven Hostel",
-    owner: "Suresh Patel",
-    type: "Boys",
-    location: "BTM Layout, Bangalore",
-    verifiedOn: "2025-04-20",
-    status: "active",
-  },
-  {
-    id: "h5",
-    name: "Ladies Paradise PG",
-    owner: "Meena Reddy",
-    type: "Girls",
-    location: "JP Nagar, Bangalore",
-    verifiedOn: "2025-04-25",
-    status: "active",
-  },
-  {
-    id: "h6",
-    name: "Comfort Zone PG",
-    owner: "Vikram Singh",
-    type: "Boys",
-    location: "Whitefield, Bangalore",
-    verifiedOn: "2025-05-01",
-    status: "inactive",
-  },
-];
+import { supabase } from "@/lib/supabase";
 
 const HostelManagement = () => {
   const navigate = useNavigate();
@@ -94,6 +33,29 @@ const HostelManagement = () => {
   const [selectedHostel, setSelectedHostel] = useState<any>(null);
   const [showHostelDialog, setShowHostelDialog] = useState(false);
   const [dialogAction, setDialogAction] = useState<"view" | "verify" | "reject">("view");
+  const [pendingHostels, setPendingHostels] = useState<any[]>([]);
+  const [verifiedHostels, setVerifiedHostels] = useState<any[]>([]);
+
+  useEffect(() => {
+    const fetchHostels = async () => {
+      const { data, error } = await supabase
+        .from("hostels")
+        .select("*, profiles(name)")
+        .order("created_at", { ascending: false });
+      if (error) {
+        toast.error("Failed to fetch hostels");
+        return;
+      }
+
+      const pending = data.filter((h) => h.status === "pending");
+      const verified = data.filter((h) => h.status !== "pending");
+
+      setPendingHostels(pending);
+      setVerifiedHostels(verified);
+    };
+
+    fetchHostels();
+  }, []);
 
   const handleVerify = (hostel: any) => {
     toast.success(`${hostel.name} has been verified successfully`);
@@ -111,15 +73,15 @@ const HostelManagement = () => {
   };
 
   const filteredPendingHostels = pendingHostels.filter((hostel) =>
-    hostel.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-    hostel.owner.toLowerCase().includes(searchQuery.toLowerCase()) ||
-    hostel.location.toLowerCase().includes(searchQuery.toLowerCase())
+    hostel.name?.toLowerCase().includes(searchQuery.toLowerCase()) ||
+    (hostel.profiles?.name || "Unknown").toLowerCase().includes(searchQuery.toLowerCase()) ||
+    (hostel.location || "").toLowerCase().includes(searchQuery.toLowerCase())
   );
 
   const filteredVerifiedHostels = verifiedHostels.filter((hostel) =>
-    hostel.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-    hostel.owner.toLowerCase().includes(searchQuery.toLowerCase()) ||
-    hostel.location.toLowerCase().includes(searchQuery.toLowerCase())
+    hostel.name?.toLowerCase().includes(searchQuery.toLowerCase()) ||
+    (hostel.profiles?.name || "Unknown").toLowerCase().includes(searchQuery.toLowerCase()) ||
+    (hostel.location || "").toLowerCase().includes(searchQuery.toLowerCase())
   );
 
   const openHostelDialog = (hostel: any, action: "view" | "verify" | "reject") => {
@@ -178,12 +140,15 @@ const HostelManagement = () => {
                     filteredPendingHostels.map((hostel) => (
                       <TableRow key={hostel.id}>
                         <TableCell className="font-medium">{hostel.name}</TableCell>
-                        <TableCell>{hostel.owner}</TableCell>
+                        <TableCell>{hostel.profiles?.name || "Unknown"}</TableCell>
                         <TableCell>
                           <Badge variant="outline">{hostel.type}</Badge>
                         </TableCell>
                         <TableCell>{hostel.location}</TableCell>
-                        <TableCell>{hostel.submittedOn}</TableCell>
+                        <TableCell>
+                          {/* Show submittedOn as created_at */}
+                          {hostel.created_at ? new Date(hostel.created_at).toLocaleDateString() : "-"}
+                        </TableCell>
                         <TableCell>
                           <div className="flex space-x-2">
                             <Button
@@ -243,7 +208,7 @@ const HostelManagement = () => {
                     filteredVerifiedHostels.map((hostel) => (
                       <TableRow key={hostel.id}>
                         <TableCell className="font-medium">{hostel.name}</TableCell>
-                        <TableCell>{hostel.owner}</TableCell>
+                        <TableCell>{hostel.profiles?.name || "Unknown"}</TableCell>
                         <TableCell>
                           <Badge variant="outline">{hostel.type}</Badge>
                         </TableCell>
@@ -301,7 +266,6 @@ const HostelManagement = () => {
           </TabsContent>
         </Tabs>
       </div>
-
       {/* Hostel Detail Dialog */}
       {selectedHostel && (
         <Dialog open={showHostelDialog} onOpenChange={setShowHostelDialog}>
@@ -347,71 +311,31 @@ const HostelManagement = () => {
                         {selectedHostel.status === "active" ? "Active" : selectedHostel.status === "pending" ? "Pending" : "Inactive"}
                       </Badge>
                     </div>
-                  </div>
-                </div>
-
-                <div>
-                  <h3 className="text-sm font-medium mb-1">Owner Information</h3>
-                  <div className="rounded-md border p-4 space-y-2">
                     <div>
-                      <span className="text-sm text-gray-500">Name:</span>
-                      <p className="font-medium">{selectedHostel.owner}</p>
-                    </div>
-                    <div>
-                      <span className="text-sm text-gray-500">Contact:</span>
-                      <p className="font-medium">+91 98765 43210</p>
-                    </div>
-                    <div>
-                      <span className="text-sm text-gray-500">Email:</span>
-                      <p className="font-medium">{selectedHostel.owner.split(' ')[0].toLowerCase()}@example.com</p>
+                      <span className="text-sm text-gray-500">Submitted On:</span>
+                      <p className="font-medium">
+                        {selectedHostel.created_at ? new Date(selectedHostel.created_at).toLocaleDateString() : "-"}
+                        </p>
+                      </div>
+                      <div>
+                        <span className="text-sm text-gray-500">Verified On:</span>
+                        <p className="font-medium">
+                          {selectedHostel.verified_on
+                            ? new Date(selectedHostel.verified_on).toLocaleDateString()
+                            : selectedHostel.status !== "pending" && selectedHostel.updated_at
+                        /* ... rest of the dialog ... */ }
+                        </p>
+                      </div>
                     </div>
                   </div>
+                  {/* ...rest of dialog... */}
                 </div>
               </div>
-
-              {dialogAction !== "view" && (
-                <div>
-                  <h3 className="text-sm font-medium mb-1">
-                    {dialogAction === "verify" ? "Verification Notes" : "Rejection Reason"}
-                  </h3>
-                  <Input
-                    placeholder={
-                      dialogAction === "verify"
-                        ? "Add any notes for verification (optional)"
-                        : "Please specify reason for rejection"
-                    }
-                  />
-                </div>
-              )}
-            </div>
-
-            <DialogFooter>
-              <Button variant="outline" onClick={() => setShowHostelDialog(false)}>
-                Cancel
-              </Button>
-              {dialogAction === "verify" && (
-                <Button 
-                  variant="default"
-                  className="bg-green-600 hover:bg-green-700"
-                  onClick={() => handleVerify(selectedHostel)}
-                >
-                  Verify Hostel
-                </Button>
-              )}
-              {dialogAction === "reject" && (
-                <Button 
-                  variant="destructive"
-                  onClick={() => handleReject(selectedHostel)}
-                >
-                  Reject Hostel
-                </Button>
-              )}
-            </DialogFooter>
-          </DialogContent>
-        </Dialog>
-      )}
-    </AdminLayout>
-  );
+            </DialogContent>
+          </Dialog>
+        )}
+      </AdminLayout>
+    );
 };
 
 export default HostelManagement;

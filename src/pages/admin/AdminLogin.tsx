@@ -7,6 +7,7 @@ import { Button } from "@/components/ui/button";
 import { InputOTP, InputOTPGroup, InputOTPSlot } from "@/components/ui/input-otp";
 import { toast } from "@/components/ui/sonner";
 import { Shield } from "lucide-react";
+import { supabase } from "@/lib/supabase";
 
 const AdminLogin = () => {
   const navigate = useNavigate();
@@ -18,21 +19,35 @@ const AdminLogin = () => {
   const [showOtpInput, setShowOtpInput] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
 
-  const handleLogin = () => {
+  const handleLogin = async () => {
     if (!email || !password) {
       toast.error("Please enter both email and password");
       return;
     }
     setIsLoading(true);
-    setTimeout(() => {
-      if (email === "admin@oneto7.com" && password === "admin123") {
-        toast.success("Admin login successful");
-        navigate("/admin/dashboard");
-      } else {
-        toast.error("Invalid credentials");
-      }
+    // Supabase sign in
+    const { data, error } = await supabase.auth.signInWithPassword({ email, password });
+    if (error) {
+      toast.error(error.message);
       setIsLoading(false);
-    }, 1500);
+      return;
+    }
+
+    // Optional: Check role from user metadata or fetch from `profiles` table
+    const { data: profile } = await supabase
+      .from("profiles")
+      .select("role")
+      .eq("id", data.user.id)
+      .single();
+    if (profile?.role !== "admin") {
+      toast.error("Access denied. You are not an admin.");
+      setIsLoading(false);
+      return;
+    }
+
+    toast.success("Admin login successful");
+    navigate("/admin/dashboard");
+    setIsLoading(false);
   };
 
   return (
@@ -140,6 +155,12 @@ const AdminLogin = () => {
           >
             {showOtpInput ? "Verify & Login" : useEmail ? "Login" : "Send OTP"}
           </Button>
+          <div className="text-center w-full mt-3 text-sm">
+            Don’t have an account?{" "}
+            <a href="/register" className="text-blue-600 underline">
+              Register here
+            </a>
+          </div>
         </CardFooter>
       </Card>
     </div>
