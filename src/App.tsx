@@ -8,6 +8,7 @@ import NotFound from "./pages/NotFound";
 import SplashScreen from "./pages/SplashScreen";
 import RoleSelection from "./pages/RoleSelection";
 import Login from "./pages/Login";
+import Register from "./pages/Register";
 import Home from "./pages/hosteller/Home";
 import HostelDetail from "./pages/hosteller/HostelDetail";
 import Booking from "./pages/hosteller/Booking";
@@ -106,6 +107,7 @@ const App = () => (
           
           {/* Retain Default Routes */}
           <Route path="/index" element={<Index />} />
+          <Route path="/register" element={<Register />} />
           <Route path="*" element={<NotFound />} />
         </Routes>
       </BrowserRouter>

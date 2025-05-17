@@ -128,27 +128,38 @@ const AgentLogin = () => {
                   Switch
                 </button>
               </p>
-              {useEmail ? (
+
+              {/* Always show phone number input at the top */}
+              <div className="flex">
+                <div className="bg-gray-100 px-3 py-2 border border-r-0 rounded-l-md text-gray-500">+91</div>
                 <Input
-                  placeholder="Email address"
-                  type="email"
-                  value={email}
-                  onChange={(e) => setEmail(e.target.value)}
+                  className="rounded-l-none focus:ring-blue-500"
+                  placeholder="10-digit mobile number"
+                  value={phoneNumber}
+                  onChange={(e) => setPhoneNumber(e.target.value.replace(/\D/g, '').slice(0, 10))}
+                  type="tel"
+                  inputMode="numeric"
+                  pattern="[0-9]*"
+                  autoComplete="tel"
                 />
-              ) : (
-                <div className="flex">
-                  <div className="bg-gray-100 px-3 py-2 border border-r-0 rounded-l-md text-gray-500">+91</div>
+              </div>
+
+              {/* Show email/password input below if toggled */}
+              {useEmail && (
+                <>
                   <Input
-                    className="rounded-l-none focus:ring-blue-500"
-                    placeholder="10-digit mobile number"
-                    value={phoneNumber}
-                    onChange={(e) => setPhoneNumber(e.target.value.replace(/\D/g, '').slice(0, 10))}
-                    type="tel"
-                    inputMode="numeric"
-                    pattern="[0-9]*"
-                    autoComplete="tel"
+                    placeholder="Email address"
+                    type="email"
+                    value={email}
+                    onChange={(e) => setEmail(e.target.value)}
                   />
-                </div>
+                  <Input
+                    placeholder="Password"
+                    type="password"
+                    value={password}
+                    onChange={(e) => setPassword(e.target.value)}
+                  />
+                </>
               )}
               <p className="text-xs text-gray-500 text-center">
                 By continuing you agree to our <a href="#" className="text-blue-600">Terms & Conditions</a> and <a href="#" className="text-blue-600">Privacy Policy</a>
@@ -200,6 +211,9 @@ const AgentLogin = () => {
               <span>{showOtpInput ? "Verify & Continue" : "Send OTP"}</span>
             )}
           </Button>
+          <div className="text-center w-full mt-3 text-sm">
+            Don't have an account? <a href="/register" className="text-blue-600 underline">Register here</a>
+          </div>
         </CardFooter>
       </Card>
     </div>
