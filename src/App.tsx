@@ -1,4 +1,3 @@
-
 import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
@@ -45,6 +44,10 @@ import AgentMyHostels from "./pages/agent/AgentMyHostels";
 import AgentTasks from "./pages/agent/AgentTasks";
 import AgentPerformance from "./pages/agent/AgentPerformance";
 import AgentProfile from "./pages/agent/AgentProfile";
+import AgentViewHostel from "./pages/agent/AgentViewHostel";
+import AgentEditHostel from "./pages/agent/AgentEditHostel";
+import AgentHostelImages from "./pages/agent/AgentHostelImages";
+import AgentContactHostel from "./pages/agent/AgentContactHostel";
 
 const queryClient = new QueryClient();
 
@@ -96,6 +99,10 @@ const App = () => (
           <Route path="/agent/tasks" element={<AgentTasks />} />
           <Route path="/agent/performance" element={<AgentPerformance />} />
           <Route path="/agent/profile" element={<AgentProfile />} />
+          <Route path="/agent/view-hostel/:id" element={<AgentViewHostel />} />
+          <Route path="/agent/edit-hostel/:id" element={<AgentEditHostel />} />
+          <Route path="/agent/hostel-images/:id" element={<AgentHostelImages />} />
+          <Route path="/agent/contact-hostel/:id" element={<AgentContactHostel />} />
           
           {/* Retain Default Routes */}
           <Route path="/index" element={<Index />} />

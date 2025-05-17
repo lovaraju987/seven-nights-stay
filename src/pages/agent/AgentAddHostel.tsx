@@ -1,5 +1,4 @@
-
-import React from "react";
+import React, { useState, useRef } from "react";
 import AgentLayout from "@/components/agent/AgentLayout";
 import { Card, CardHeader, CardContent } from "@/components/ui/card";
 import { Form } from "@/components/ui/form";
@@ -10,11 +9,13 @@ import { useForm } from "react-hook-form";
 import { useNavigate } from "react-router-dom";
 import { toast } from "@/components/ui/sonner";
 import { ArrowLeftIcon } from "lucide-react";
+import { GoogleMap, LoadScript, Marker, Autocomplete } from '@react-google-maps/api';
 
 const AgentAddHostel = () => {
   const navigate = useNavigate();
   const form = useForm({
     defaultValues: {
+      hostelType: "",
       hostelName: "",
       ownerName: "",
       ownerPhone: "",
@@ -24,8 +25,21 @@ const AgentAddHostel = () => {
       state: "",
       isOwnerAware: "yes",
       agentNotes: "",
+      videoUrls: [""],
     },
   });
+
+  // Enhancement 7: Unsaved Data Warning on Navigation
+  window.onbeforeunload = (e) => {
+    if (form.formState.isDirty) {
+      e.preventDefault();
+      e.returnValue = '';
+    }
+  };
+
+  const [mapCenter, setMapCenter] = useState({ lat: 17.385044, lng: 78.486671 });
+  const [markerPosition, setMarkerPosition] = useState(mapCenter);
+  const autocompleteRef = useRef<google.maps.places.Autocomplete | null>(null);
 
   const onSubmit = (data: any) => {
     console.log(data);
@@ -59,12 +73,26 @@ const AgentAddHostel = () => {
               <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
                 {/* Hostel Information */}
                 <div className="space-y-4">
+                  {/* Enhancement 1: Hostel Type Field */}
+                  <div className="mb-4">
+                    <label htmlFor="hostelType" className="block text-sm font-medium mb-1">Hostel Type *</label>
+                    <select 
+                      id="hostelType" 
+                      className="w-full p-2 border rounded"
+                      {...form.register("hostelType", { required: true })}
+                    >
+                      <option value="">Select Hostel Type</option>
+                      <option value="boys">Boys</option>
+                      <option value="girls">Girls</option>
+                      <option value="coed">Co-ed</option>
+                    </select>
+                  </div>
                   <div>
                     <label htmlFor="hostelName" className="block text-sm font-medium mb-1">Hostel Name *</label>
                     <Input 
                       id="hostelName"
                       placeholder="E.g., Royal Boys Hostel" 
-                      {...form.register("hostelName")}
+                      {...form.register("hostelName", { required: true })}
                     />
                   </div>
 
@@ -77,7 +105,7 @@ const AgentAddHostel = () => {
                         <Input 
                           id="ownerName"
                           placeholder="Full name of owner" 
-                          {...form.register("ownerName")} 
+                          {...form.register("ownerName", { required: true })} 
                         />
                       </div>
                       <div>
@@ -85,7 +113,7 @@ const AgentAddHostel = () => {
                         <Input 
                           id="ownerPhone"
                           placeholder="10-digit mobile number" 
-                          {...form.register("ownerPhone")} 
+                          {...form.register("ownerPhone", { required: true })} 
                         />
                       </div>
                       <div>
@@ -119,7 +147,7 @@ const AgentAddHostel = () => {
                         id="address"
                         placeholder="Complete address with building name, street, etc."
                         rows={3}
-                        {...form.register("address")}
+                        {...form.register("address", { required: true })}
                       />
                     </div>
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mt-4">
@@ -128,7 +156,7 @@ const AgentAddHostel = () => {
                         <Input 
                           id="city"
                           placeholder="E.g., Mumbai" 
-                          {...form.register("city")} 
+                          {...form.register("city", { required: true })} 
                         />
                       </div>
                       <div>
@@ -136,8 +164,76 @@ const AgentAddHostel = () => {
                         <Input 
                           id="state"
                           placeholder="E.g., Maharashtra" 
-                          {...form.register("state")} 
+                          {...form.register("state", { required: true })} 
                         />
+                      </div>
+                    </div>
+                    {/* Google Maps Location Picker */}
+                    <div className="mt-4">
+                      <label htmlFor="location" className="block text-sm font-medium mb-1">
+                        Hostel Location on Map *
+                      </label>
+                      <LoadScript googleMapsApiKey={import.meta.env.VITE_GOOGLE_MAPS_API_KEY} libraries={['places']}>
+                        <Autocomplete
+                          onLoad={(autocomplete) => (autocompleteRef.current = autocomplete)}
+                          onPlaceChanged={() => {
+                            const place = autocompleteRef.current?.getPlace();
+                            if (place?.geometry?.location) {
+                              const lat = place.geometry.location.lat();
+                              const lng = place.geometry.location.lng();
+                              setMapCenter({ lat, lng });
+                              setMarkerPosition({ lat, lng });
+                              form.setValue('lat', lat);
+                              form.setValue('lng', lng);
+
+                              const components = place.address_components || [];
+                              const address = place.formatted_address || "";
+                              const city = components.find(c => c.types.includes("locality"))?.long_name || "";
+                              const state = components.find(c => c.types.includes("administrative_area_level_1"))?.long_name || "";
+
+                              form.setValue("address", address);
+                              form.setValue("city", city);
+                              form.setValue("state", state);
+                            }
+                          }}
+                        >
+                          <Input
+                            placeholder="Search for hostel location..."
+                            className="mb-2"
+                          />
+                        </Autocomplete>
+                        <GoogleMap
+                          center={mapCenter}
+                          zoom={15}
+                          mapContainerStyle={{ width: '100%', height: '256px' }}
+                          onClick={(e) => {
+                            const lat = e.latLng?.lat() || 0;
+                            const lng = e.latLng?.lng() || 0;
+                            setMarkerPosition({ lat, lng });
+                            form.setValue('lat', lat);
+                            form.setValue('lng', lng);
+                          }}
+                        >
+                          <Marker position={markerPosition} />
+                        </GoogleMap>
+                      </LoadScript>
+                      <div className="grid grid-cols-2 gap-4 mt-2">
+                        <div>
+                          <label htmlFor="lat" className="block text-sm font-medium mb-1">Latitude *</label>
+                          <Input 
+                            id="lat"
+                            placeholder="17.385044"
+                            {...form.register("lat", { required: true })}
+                          />
+                        </div>
+                        <div>
+                          <label htmlFor="lng" className="block text-sm font-medium mb-1">Longitude *</label>
+                          <Input 
+                            id="lng"
+                            placeholder="78.486671"
+                            {...form.register("lng", { required: true })}
+                          />
+                        </div>
                       </div>
                     </div>
                   </div>
@@ -157,33 +253,96 @@ const AgentAddHostel = () => {
                   </div>
 
                   {/* Upload ID Proof */}
+                  {/* Enhancement 2: ID Proof Upload Field */}
                   <div className="pt-4 border-t">
                     <h3 className="font-medium mb-3">Owner ID Proof</h3>
-                    <div className="border-2 border-dashed border-gray-300 rounded-md p-6 text-center">
-                      <svg
-                        className="mx-auto h-12 w-12 text-gray-400"
-                        stroke="currentColor"
-                        fill="none"
-                        viewBox="0 0 48 48"
-                        aria-hidden="true"
-                      >
-                        <path
-                          strokeLinecap="round"
-                          strokeLinejoin="round"
-                          strokeWidth={2}
-                          d="M8 14v20c0 4.418 7.163 8 16 8 1.381 0 2.721-.087 4-.252M8 14c0 4.418 7.163 8 16 8s16-3.582 16-8M8 14c0-4.418 7.163-8 16-8s16 3.582 16 8m0 0v14m0-4c0 4.418-7.163 8-16 8S8 28.418 8 24m32 10v6m0 0v6m0-6h6m-6 0h-6"
-                        />
-                      </svg>
-                      <div className="mt-4 flex justify-center">
-                        <Button type="button" variant="outline">
-                          Upload ID Proof
-                        </Button>
-                      </div>
-                      <p className="mt-2 text-xs text-gray-500">
-                        Upload Aadhaar, Pan Card, or Voter ID
-                      </p>
+                    <div className="mb-4">
+                      <label htmlFor="idProofFile" className="block text-sm font-medium mb-1">Upload ID Proof *</label>
+                      <input 
+                        type="file"
+                        id="idProofFile"
+                        accept="image/*,.pdf"
+                        className="w-full p-2 border rounded"
+                        {...form.register("idProofFile", { required: true })}
+                      />
+                      <p className="mt-1 text-xs text-gray-500">Upload Aadhaar, Pan Card, or Voter ID (Max: 5MB)</p>
                     </div>
                   </div>
+
+                  {/* Enhancement 5: Hostel Registration Proof Upload */}
+                  <div className="pt-4 border-t">
+                    <h3 className="font-medium mb-3">Hostel Registration Proof (Optional)</h3>
+                    <input
+                      type="file"
+                      id="registrationProof"
+                      accept=".pdf,image/*"
+                      className="w-full p-2 border rounded"
+                      {...form.register("registrationProof")}
+                    />
+                    <p className="mt-1 text-xs text-gray-500">PDF or image of hostel registration certificate</p>
+                  </div>
+
+                  {/* Hostel Media */}
+                  <div className="pt-4 border-t">
+                    <h3 className="font-medium mb-3">Hostel Media</h3>
+                    <div className="mb-4">
+                      <label htmlFor="hostelImages" className="block text-sm font-medium mb-1">Upload Hostel Images *</label>
+                      {/* Enhancement 4: Hostel Images Validation */}
+                      <input
+                        type="file"
+                        id="hostelImages"
+                        accept="image/png, image/jpeg"
+                        multiple
+                        className="w-full p-2 border rounded"
+                        {...form.register("hostelImages", {
+                          validate: (files: FileList) => {
+                            for (let i = 0; i < files.length; i++) {
+                              const file = files[i];
+                              if (file.size > 5 * 1024 * 1024) return "Image too large (max 5MB)";
+                            }
+                            return true;
+                          }
+                        })}
+                      />
+                      <p className="mt-1 text-xs text-gray-500">You can upload multiple images (JPG, PNG).</p>
+                      {/* Enhancement 6: Image Preview of Uploaded Images */}
+                      {form.watch("hostelImages") && Array.from(form.watch("hostelImages")).map((file: File, index: number) => (
+                        <img key={index} src={URL.createObjectURL(file)} alt="Preview" className="w-24 h-24 object-cover inline-block mr-2 mt-2 rounded" />
+                      ))}
+                    </div>
+                    <div className="mb-4">
+                      <label className="block text-sm font-medium mb-1">Video Links (Optional)</label>
+                      {form.watch("videoUrls")?.map((_: string, index: number) => (
+                        <div key={index} className="flex gap-2 mb-2">
+                          <Input
+                            placeholder={`https://youtu.be/video${index + 1}`}
+                            {...form.register(`videoUrls.${index}` as const)}
+                          />
+                          <Button
+                            type="button"
+                            variant="ghost"
+                            onClick={() => {
+                              const current = form.getValues("videoUrls") || [];
+                              form.setValue("videoUrls", current.filter((_, i) => i !== index));
+                            }}
+                          >
+                            Remove
+                          </Button>
+                        </div>
+                      ))}
+                      <Button
+                        type="button"
+                        variant="outline"
+                        onClick={() => {
+                          const current = form.getValues("videoUrls") || [];
+                          form.setValue("videoUrls", [...current, ""]);
+                        }}
+                      >
+                        Add Video Link
+                      </Button>
+                    </div>
+                  </div>
+
                 </div>
 
                 <div className="flex flex-col sm:flex-row gap-4 pt-4 border-t">
