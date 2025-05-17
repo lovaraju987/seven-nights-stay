@@ -7,17 +7,37 @@ import { Button } from "@/components/ui/button";
 import { InputOTP, InputOTPGroup, InputOTPSlot } from "@/components/ui/input-otp";
 import { toast } from "@/components/ui/sonner";
 import { ArrowLeftIcon } from "lucide-react";
+import { supabase } from "@/lib/supabase";
 
 const AgentLogin = () => {
   const navigate = useNavigate();
   const [phoneNumber, setPhoneNumber] = useState("");
   const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
   const [useEmail, setUseEmail] = useState(false);
   const [showOtpInput, setShowOtpInput] = useState(false);
   const [otp, setOtp] = useState("");
   const [isLoading, setIsLoading] = useState(false);
   const [timer, setTimer] = useState(30);
 
+  // Email/password login handler
+  const handleEmailLogin = async () => {
+    if (!email || !password) {
+      toast.error("Please enter both email and password");
+      return;
+    }
+    setIsLoading(true);
+    const { error } = await supabase.auth.signInWithPassword({ email, password });
+    if (error) {
+      toast.error(error.message);
+    } else {
+      toast.success("Login successful!");
+      navigate("/agent/dashboard");
+    }
+    setIsLoading(false);
+  };
+
+  // OTP handlers (mock/demo)
   const handleSendOtp = () => {
     if (useEmail) {
       if (!email.includes("@")) {
@@ -76,16 +96,12 @@ const AgentLogin = () => {
 
   const handleResendOtp = () => {
     if (timer > 0) return;
-    
     setTimer(30);
     toast.success("OTP resent to your mobile number");
-    
-    // Reset countdown timer
     let countDown = 30;
     const interval = setInterval(() => {
       countDown -= 1;
       setTimer(countDown);
-      
       if (countDown <= 0) {
         clearInterval(interval);
       }
@@ -129,20 +145,21 @@ const AgentLogin = () => {
                 </button>
               </p>
 
-              {/* Always show phone number input at the top */}
-              <div className="flex">
-                <div className="bg-gray-100 px-3 py-2 border border-r-0 rounded-l-md text-gray-500">+91</div>
-                <Input
-                  className="rounded-l-none focus:ring-blue-500"
-                  placeholder="10-digit mobile number"
-                  value={phoneNumber}
-                  onChange={(e) => setPhoneNumber(e.target.value.replace(/\D/g, '').slice(0, 10))}
-                  type="tel"
-                  inputMode="numeric"
-                  pattern="[0-9]*"
-                  autoComplete="tel"
-                />
-              </div>
+              {!useEmail && (
+                <div className="flex">
+                  <div className="bg-gray-100 px-3 py-2 border border-r-0 rounded-l-md text-gray-500">+91</div>
+                  <Input
+                    className="rounded-l-none focus:ring-blue-500"
+                    placeholder="10-digit mobile number"
+                    value={phoneNumber}
+                    onChange={(e) => setPhoneNumber(e.target.value.replace(/\D/g, '').slice(0, 10))}
+                    type="tel"
+                    inputMode="numeric"
+                    pattern="[0-9]*"
+                    autoComplete="tel"
+                  />
+                </div>
+              )}
 
               {/* Show email/password input below if toggled */}
               {useEmail && (
@@ -179,7 +196,6 @@ const AgentLogin = () => {
                   </InputOTPGroup>
                 </InputOTP>
               </div>
-
               <p className="text-center">
                 <button
                   onClick={handleResendOtp}
@@ -196,8 +212,21 @@ const AgentLogin = () => {
         <CardFooter>
           <Button
             className="w-full"
-            onClick={showOtpInput ? handleVerifyOtp : handleSendOtp}
-            disabled={isLoading || (showOtpInput ? otp.length !== 6 : (useEmail ? !email : phoneNumber.length !== 10))}
+            onClick={
+              useEmail
+                ? handleEmailLogin
+                : showOtpInput
+                  ? handleVerifyOtp
+                  : handleSendOtp
+            }
+            disabled={
+              isLoading ||
+              (useEmail
+                ? !email || !password
+                : showOtpInput
+                  ? otp.length !== 6
+                  : phoneNumber.length !== 10)
+            }
           >
             {isLoading ? (
               <span className="flex items-center gap-2">
@@ -205,10 +234,10 @@ const AgentLogin = () => {
                   <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" fill="none" />
                   <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" />
                 </svg>
-                {showOtpInput ? "Verifying..." : "Sending OTP..."}
+                {showOtpInput ? "Verifying..." : useEmail ? "Logging in..." : "Sending OTP..."}
               </span>
             ) : (
-              <span>{showOtpInput ? "Verify & Continue" : "Send OTP"}</span>
+              <span>{showOtpInput ? "Verify & Continue" : useEmail ? "Login" : "Send OTP"}</span>
             )}
           </Button>
           <div className="text-center w-full mt-3 text-sm">

@@ -10,6 +10,7 @@ import { useNavigate } from "react-router-dom";
 import { toast } from "@/components/ui/sonner";
 import { ArrowLeftIcon } from "lucide-react";
 import { GoogleMap, LoadScript, Marker, Autocomplete } from '@react-google-maps/api';
+import { supabase } from "@/lib/supabase";
 
 const AgentAddHostel = () => {
   const navigate = useNavigate();
@@ -41,9 +42,76 @@ const AgentAddHostel = () => {
   const [markerPosition, setMarkerPosition] = useState(mapCenter);
   const autocompleteRef = useRef<google.maps.places.Autocomplete | null>(null);
 
-  const onSubmit = (data: any) => {
-    console.log(data);
-    toast.success("Hostel submitted for review!");
+  const onSubmit = async (data: any) => {
+    const { data: userData } = await supabase.auth.getUser();
+    const userId = userData?.user?.id;
+
+    if (!userId) {
+      toast.error("You must be logged in to submit a hostel.");
+      return;
+    }
+
+    // Upload images to Supabase Storage before inserting hostel
+    const uploadedImageUrls: string[] = [];
+
+    if (data.hostelImages && data.hostelImages.length > 0) {
+      for (const file of Array.from(data.hostelImages)) {
+        const sanitizedFileName = file.name
+          .toLowerCase()
+          .replace(/\s+/g, "-")             // Replace spaces with dashes
+          .replace(/[^\w.-]+/g, "");        // Remove special characters
+
+        const filePath = `${userId}/${Date.now()}-${sanitizedFileName}`;
+        const { data: uploadData, error: uploadError } = await supabase.storage
+          .from("hostel-images")
+          .upload(filePath, file);
+
+        if (uploadError) {
+          console.error("Upload error:", uploadError.message);
+          toast.error("Image upload failed.");
+          return;
+        }
+
+        // Use the correct way to get public URL as per new logic
+        const { data: publicUrlData } = supabase.storage
+          .from("hostel-images")
+          .getPublicUrl(filePath);
+        const publicUrl = publicUrlData?.publicUrl;
+
+        uploadedImageUrls.push(publicUrl);
+      }
+    }
+
+    const { error } = await supabase.from("hostels").insert([
+      {
+        name: data.hostelName,
+        type: data.hostelType,
+        description: data.agentNotes || "",
+        address: {
+          address: data.address,
+          city: data.city,
+          state: data.state
+        },
+        lat: data.lat,
+        lng: data.lng,
+        agent_id: userId,
+        status: "draft",
+        images: uploadedImageUrls,
+        video_url: data.videoUrls?.[0] || null,
+        created_by: "agent",
+        owner_name: data.ownerName,
+        owner_phone: data.ownerPhone,
+        updated_at: new Date().toISOString()
+      }
+    ]);
+
+    if (error) {
+      console.error(error);
+      toast.error("Failed to submit hostel");
+      return;
+    }
+
+    toast.success("Hostel submitted successfully!");
     navigate("/agent/my-hostels");
   };
 
