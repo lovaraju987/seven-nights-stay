@@ -24,7 +24,7 @@ import {
   ShieldX,
 } from "lucide-react";
 import { toast } from "@/components/ui/sonner";
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogDescription } from "@/components/ui/dialog";
 import { supabase } from "@/lib/supabase";
 
 const HostelManagement = () => {
@@ -40,7 +40,7 @@ const HostelManagement = () => {
     const fetchHostels = async () => {
       const { data, error } = await supabase
         .from("hostels")
-        .select("*, profiles(name)")
+        .select("*, profiles:owner_id(name)")
         .order("created_at", { ascending: false });
       if (error) {
         toast.error("Failed to fetch hostels");
@@ -278,6 +278,9 @@ const HostelManagement = () => {
                   ? `Verify ${selectedHostel.name}`
                   : `Reject ${selectedHostel.name}`}
               </DialogTitle>
+              <DialogDescription>
+                Review the hostel information and take appropriate action.
+              </DialogDescription>
             </DialogHeader>
             
             <div className="grid gap-4 py-4">
