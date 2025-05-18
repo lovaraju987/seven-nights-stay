@@ -1,5 +1,5 @@
 
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import AdminLayout from "@/components/admin/AdminLayout";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
@@ -31,70 +31,7 @@ import {
 import { toast } from "@/components/ui/sonner";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { Textarea } from "@/components/ui/textarea";
-
-// Mock complaint data
-const complaints = [
-  {
-    id: "c1",
-    issue: "Water shortage",
-    category: "Facility",
-    user: "Rahul Sharma",
-    hostel: "Royal Boys Hostel",
-    createdAt: "2025-05-14",
-    status: "open",
-    priority: "high",
-    description: "There has been no water supply for the past 24 hours. This is causing a lot of inconvenience.",
-    bookingId: "B1001",
-  },
-  {
-    id: "c2",
-    issue: "Cleanliness issues",
-    category: "Hygiene",
-    user: "Priya Patel",
-    hostel: "Sunshine Girls PG",
-    createdAt: "2025-05-13",
-    status: "in-progress",
-    priority: "medium",
-    description: "The common areas are not being cleaned regularly. The bathrooms are dirty and unhygienic.",
-    bookingId: "B1002",
-  },
-  {
-    id: "c3",
-    issue: "WiFi not working",
-    category: "Facility",
-    user: "Vikram Singh",
-    hostel: "Elite Co-Living Space",
-    createdAt: "2025-05-12",
-    status: "resolved",
-    priority: "low",
-    description: "The WiFi has been down for 2 days now. I need internet connection for my online classes.",
-    bookingId: "B1003",
-  },
-  {
-    id: "c4",
-    issue: "Incorrect billing",
-    category: "Billing",
-    user: "Meena Reddy",
-    hostel: "Ladies Paradise PG",
-    createdAt: "2025-05-11",
-    status: "open",
-    priority: "medium",
-    description: "I was charged for AC room but I'm staying in a non-AC room. Please rectify this and refund the difference.",
-    bookingId: "B1004",
-  },
-  {
-    id: "c5",
-    issue: "Security concerns",
-    category: "Safety",
-    user: "Ramesh Kumar",
-    hostel: "Student Haven Hostel",
-    createdAt: "2025-05-10",
-    status: "escalated",
-    priority: "high",
-    description: "The main gate is left open at night and anyone can walk in. This is a serious security concern.",
-    bookingId: "B1005",
-  },
-];
+import { supabase } from "@/lib/supabase";
 
 const statusColors = {
   open: "warning",
@@ -110,12 +47,44 @@ const priorityColors = {
 };
 
 const ComplaintManagement = () => {
+  const [complaints, setComplaints] = useState<any[]>([]);
   const [searchQuery, setSearchQuery] = useState("");
   const [statusFilter, setStatusFilter] = useState<string>("all");
   const [priorityFilter, setPriorityFilter] = useState<string>("all");
   const [selectedComplaint, setSelectedComplaint] = useState<any>(null);
   const [showComplaintDialog, setShowComplaintDialog] = useState(false);
   const [response, setResponse] = useState("");
+
+  useEffect(() => {
+    const fetchComplaints = async () => {
+      const { data, error } = await supabase
+        .from("complaints")
+        .select("*, profiles(name), hostels(name)")
+        .order("created_at", { ascending: false });
+
+      if (error) {
+        toast.error("Failed to load complaints");
+        return;
+      }
+
+      const formatted = data.map((c: any) => ({
+        id: c.id,
+        issue: c.issue,
+        category: c.category,
+        user: c.profiles?.name || "Unknown",
+        hostel: c.hostels?.name || "Unknown",
+        createdAt: new Date(c.created_at).toLocaleDateString(),
+        status: c.status,
+        priority: c.priority,
+        description: c.description,
+        bookingId: c.booking_id,
+      }));
+
+      setComplaints(formatted);
+    };
+
+    fetchComplaints();
+  }, []);
 
   const handleStatusChange = (complaintId: string, newStatus: string) => {
     toast.success(`Complaint #${complaintId} status updated to ${newStatus}`);
@@ -141,9 +110,9 @@ const ComplaintManagement = () => {
   const filteredComplaints = complaints.filter((complaint) => {
     // Search filter
     const matchesSearch =
-      complaint.issue.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      complaint.user.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      complaint.hostel.toLowerCase().includes(searchQuery.toLowerCase());
+      complaint.issue?.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      complaint.user?.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      complaint.hostel?.toLowerCase().includes(searchQuery.toLowerCase());
     
     // Status filter
     const matchesStatus = statusFilter === "all" || complaint.status === statusFilter;

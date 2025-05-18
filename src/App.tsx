@@ -34,8 +34,12 @@ import AdminLogin from "./pages/admin/AdminLogin";
 import AdminDashboard from "./pages/admin/AdminDashboard";
 import HostelManagement from "./pages/admin/HostelManagement";
 import UserManagement from "./pages/admin/UserManagement";
+import Reports from "./pages/admin/Reports";
+import Settings from "./pages/admin/Settings";
+import Logs from "./pages/admin/Logs";
 import ComplaintManagement from "./pages/admin/ComplaintManagement";
 import SubscriptionPlans from "./pages/admin/SubscriptionPlans";
+import Notifications from "@/pages/admin/Notifications";
 
 // Agent Routes
 import AgentLogin from "./pages/agent/AgentLogin";
@@ -91,6 +95,10 @@ const App = () => (
           <Route path="/admin/users" element={<UserManagement />} />
           <Route path="/admin/complaints" element={<ComplaintManagement />} />
           <Route path="/admin/subscriptions" element={<SubscriptionPlans />} />
+          <Route path="/admin/notifications" element={<Notifications />} />
+          <Route path="/admin/reports" element={<Reports />} />
+          <Route path="/admin/logs" element={<Logs />} />
+          <Route path="/admin/settings" element={<Settings />} />
           
           {/* Agent Routes */}
           <Route path="/agent/login" element={<AgentLogin />} />

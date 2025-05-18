@@ -1,5 +1,4 @@
-
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import AdminLayout from "@/components/admin/AdminLayout";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -29,77 +28,73 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from "@/components/ui/dialog";
+import { supabase } from "@/lib/supabase";
 
-// Mock data
-const users = [
-  {
-    id: "user1",
-    name: "Rahul Sharma",
-    phone: "9876543210",
-    email: "rahul.s@example.com",
-    joined: "2025-04-15",
-    bookings: 3,
-    status: "active",
-  },
-  {
-    id: "user2",
-    name: "Priya Patel",
-    phone: "8765432109",
-    email: "priya.p@example.com",
-    joined: "2025-04-20",
-    bookings: 1,
-    status: "active",
-  },
-  {
-    id: "user3",
-    name: "Vikram Singh",
-    phone: "7654321098",
-    email: "vikram.s@example.com",
-    joined: "2025-04-25",
-    bookings: 0,
-    status: "blocked",
-  },
-];
-
-const owners = [
-  {
-    id: "owner1",
-    name: "Suresh Kumar",
-    phone: "9876543210",
-    email: "suresh.k@example.com",
-    joined: "2025-03-15",
-    hostels: 2,
-    subscription: "active",
-    status: "active",
-  },
-  {
-    id: "owner2",
-    name: "Meena Reddy",
-    phone: "8765432109",
-    email: "meena.r@example.com",
-    joined: "2025-03-20",
-    hostels: 1,
-    subscription: "active",
-    status: "active",
-  },
-  {
-    id: "owner3",
-    name: "Rajesh Verma",
-    phone: "7654321098",
-    email: "rajesh.v@example.com",
-    joined: "2025-03-25",
-    hostels: 1,
-    subscription: "expired",
-    status: "blocked",
-  },
-];
 
 const UserManagement = () => {
+  const [users, setUsers] = useState<any[]>([]);
+  const [owners, setOwners] = useState<any[]>([]);
+  const [agents, setAgents] = useState<any[]>([]);
   const [searchQuery, setSearchQuery] = useState("");
   const [activeTab, setActiveTab] = useState("users");
   const [selectedUser, setSelectedUser] = useState<any>(null);
   const [showUserDialog, setShowUserDialog] = useState(false);
   const [dialogAction, setDialogAction] = useState<"view" | "block" | "unblock" | "delete">("view");
+
+  useEffect(() => {
+    const fetchUsers = async () => {
+      const { data: profiles, error } = await supabase
+        .from("profiles")
+        .select("id, name, phone, role, created_at, is_verified");
+
+      if (error) {
+        toast.error("Failed to load users");
+        return;
+      }
+
+      const { data: hostels } = await supabase
+        .from("hostels")
+        .select("owner_id");
+
+      const ownerHostelCounts = hostels?.reduce((acc: any, h: any) => {
+        acc[h.owner_id] = (acc[h.owner_id] || 0) + 1;
+        return acc;
+      }, {}) || {};
+
+      const users = profiles
+        .filter((u: any) => u.role === "hosteller")
+        .map((u: any) => ({
+          ...u,
+          joined: u.created_at,
+          bookings: 0, // Replace later if needed
+          status: u.is_verified ? "active" : "blocked",
+        }));
+
+      const owners = profiles
+        .filter((u: any) => u.role === "owner")
+        .map((u: any) => ({
+          ...u,
+          joined: u.created_at,
+          hostels: ownerHostelCounts[u.id] || 0,
+          subscription: "active", // Replace if you add column later
+          status: u.is_verified ? "active" : "blocked",
+        }));
+
+      const agents = profiles
+        .filter((u: any) => u.role === "agent")
+        .map((u: any) => ({
+          ...u,
+          joined: u.created_at,
+          status: u.is_verified ? "active" : "blocked",
+        }));
+
+      setUsers(users);
+      setOwners(owners);
+      setAgents(agents);
+    };
+
+    fetchUsers();
+  }, []);
 
   const handleBlock = (user: any) => {
     toast.success(`${user.name} has been blocked`);
@@ -118,14 +113,17 @@ const UserManagement = () => {
 
   const filteredUsers = users.filter((user) =>
     user.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-    user.phone.includes(searchQuery) ||
-    user.email.toLowerCase().includes(searchQuery.toLowerCase())
+    user.phone.includes(searchQuery)
   );
 
   const filteredOwners = owners.filter((owner) =>
     owner.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-    owner.phone.includes(searchQuery) ||
-    owner.email.toLowerCase().includes(searchQuery.toLowerCase())
+    owner.phone.includes(searchQuery)
+  );
+
+  const filteredAgents = agents.filter((agent) =>
+    agent.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+    agent.phone.includes(searchQuery)
   );
 
   const openUserDialog = (user: any, action: "view" | "block" | "unblock" | "delete") => {
@@ -168,7 +166,93 @@ const UserManagement = () => {
                 {filteredOwners.length}
               </Badge>
             </TabsTrigger>
+            <TabsTrigger value="agents" className="flex-1 sm:flex-initial">
+              Agents
+              <Badge variant="secondary" className="ml-2">
+                {filteredAgents.length}
+              </Badge>
+            </TabsTrigger>
           </TabsList>
+          <TabsContent value="agents">
+            <div className="rounded-md border">
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead>Name</TableHead>
+                    <TableHead>Phone</TableHead>
+                    <TableHead>Joined</TableHead>
+                    <TableHead>Status</TableHead>
+                    <TableHead>Actions</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {filteredAgents.length > 0 ? (
+                    filteredAgents.map((agent) => (
+                      <TableRow key={agent.id}>
+                        <TableCell className="font-medium">{agent.name}</TableCell>
+                        <TableCell>{agent.phone}</TableCell>
+                        <TableCell>{agent.joined}</TableCell>
+                        <TableCell>
+                          <Badge
+                            variant={agent.status === "active" ? "success" : "destructive"}
+                          >
+                            {agent.status === "active" ? "Active" : "Blocked"}
+                          </Badge>
+                        </TableCell>
+                        <TableCell>
+                          <DropdownMenu>
+                            <DropdownMenuTrigger asChild>
+                              <Button variant="ghost" size="icon">
+                                <MoreHorizontal className="h-4 w-4" />
+                              </Button>
+                            </DropdownMenuTrigger>
+                            <DropdownMenuContent align="end">
+                              <DropdownMenuItem onClick={() => openUserDialog(agent, "view")}>
+                                <Eye className="mr-2 h-4 w-4" />
+                                View Details
+                              </DropdownMenuItem>
+
+                              {agent.status === "active" ? (
+                                <DropdownMenuItem
+                                  className="text-red-600"
+                                  onClick={() => openUserDialog(agent, "block")}
+                                >
+                                  <UserMinus className="mr-2 h-4 w-4" />
+                                  Block Agent
+                                </DropdownMenuItem>
+                              ) : (
+                                <DropdownMenuItem
+                                  className="text-green-600"
+                                  onClick={() => openUserDialog(agent, "unblock")}
+                                >
+                                  <UserPlus className="mr-2 h-4 w-4" />
+                                  Unblock Agent
+                                </DropdownMenuItem>
+                              )}
+
+                              <DropdownMenuItem
+                                className="text-red-600"
+                                onClick={() => openUserDialog(agent, "delete")}
+                              >
+                                <Trash2 className="mr-2 h-4 w-4" />
+                                Delete Agent
+                              </DropdownMenuItem>
+                            </DropdownMenuContent>
+                          </DropdownMenu>
+                        </TableCell>
+                      </TableRow>
+                    ))
+                  ) : (
+                    <TableRow>
+                      <TableCell colSpan={6} className="text-center h-24">
+                        No agents found
+                      </TableCell>
+                    </TableRow>
+                  )}
+                </TableBody>
+              </Table>
+            </div>
+          </TabsContent>
 
           <TabsContent value="users">
             <div className="rounded-md border">
@@ -177,7 +261,6 @@ const UserManagement = () => {
                   <TableRow>
                     <TableHead>Name</TableHead>
                     <TableHead>Phone</TableHead>
-                    <TableHead>Email</TableHead>
                     <TableHead>Joined</TableHead>
                     <TableHead>Bookings</TableHead>
                     <TableHead>Status</TableHead>
@@ -190,7 +273,6 @@ const UserManagement = () => {
                       <TableRow key={user.id}>
                         <TableCell className="font-medium">{user.name}</TableCell>
                         <TableCell>{user.phone}</TableCell>
-                        <TableCell>{user.email}</TableCell>
                         <TableCell>{user.joined}</TableCell>
                         <TableCell>{user.bookings}</TableCell>
                         <TableCell>
@@ -262,7 +344,6 @@ const UserManagement = () => {
                   <TableRow>
                     <TableHead>Name</TableHead>
                     <TableHead>Phone</TableHead>
-                    <TableHead>Email</TableHead>
                     <TableHead>Hostels</TableHead>
                     <TableHead>Subscription</TableHead>
                     <TableHead>Status</TableHead>
@@ -275,7 +356,6 @@ const UserManagement = () => {
                       <TableRow key={owner.id}>
                         <TableCell className="font-medium">{owner.name}</TableCell>
                         <TableCell>{owner.phone}</TableCell>
-                        <TableCell>{owner.email}</TableCell>
                         <TableCell>{owner.hostels}</TableCell>
                         <TableCell>
                           <Badge
@@ -387,21 +467,31 @@ const UserManagement = () => {
                     <p className="font-medium">{selectedUser.phone}</p>
                   </div>
                   <div>
-                    <span className="text-sm text-gray-500">Email:</span>
-                    <p className="font-medium">{selectedUser.email}</p>
-                  </div>
-                  <div>
                     <span className="text-sm text-gray-500">Joined:</span>
                     <p className="font-medium">{selectedUser.joined}</p>
                   </div>
-                  <div>
-                    <span className="text-sm text-gray-500">
-                      {activeTab === "users" ? "Bookings:" : "Hostels:"}
-                    </span>
-                    <p className="font-medium">
-                      {activeTab === "users" ? selectedUser.bookings : selectedUser.hostels}
-                    </p>
-                  </div>
+                  {activeTab === "users" && (
+                    <div>
+                      <span className="text-sm text-gray-500">Bookings:</span>
+                      <p className="font-medium">{selectedUser.bookings}</p>
+                    </div>
+                  )}
+                  {activeTab === "owners" && (
+                    <>
+                      <div>
+                        <span className="text-sm text-gray-500">Hostels:</span>
+                        <p className="font-medium">{selectedUser.hostels}</p>
+                      </div>
+                      <div>
+                        <span className="text-sm text-gray-500">Subscription:</span>
+                        <Badge
+                          variant={selectedUser.subscription === "active" ? "success" : "destructive"}
+                        >
+                          {selectedUser.subscription === "active" ? "Active" : "Expired"}
+                        </Badge>
+                      </div>
+                    </>
+                  )}
                   <div>
                     <span className="text-sm text-gray-500">Status:</span>
                     <Badge
@@ -410,14 +500,10 @@ const UserManagement = () => {
                       {selectedUser.status === "active" ? "Active" : "Blocked"}
                     </Badge>
                   </div>
-                  {activeTab === "owners" && (
+                  {activeTab === "agents" && (
                     <div>
-                      <span className="text-sm text-gray-500">Subscription:</span>
-                      <Badge
-                        variant={selectedUser.subscription === "active" ? "success" : "destructive"}
-                      >
-                        {selectedUser.subscription === "active" ? "Active" : "Expired"}
-                      </Badge>
+                      <span className="text-sm text-gray-500">Role:</span>
+                      <p className="font-medium">Agent</p>
                     </div>
                   )}
                 </div>
