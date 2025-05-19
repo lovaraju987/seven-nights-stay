@@ -1,91 +1,107 @@
 
-import React, { useState } from "react";
+import React, { useState, useRef } from "react";
 import { useNavigate } from "react-router-dom";
-import { Card, CardContent, CardHeader } from "@/components/ui/card";
+import { Card, CardHeader, CardContent } from "@/components/ui/card";
+import { Form } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
-import { Label } from "@/components/ui/label";
-import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
-import { Checkbox } from "@/components/ui/checkbox";
+import { useForm } from "react-hook-form";
 import { toast } from "@/components/ui/sonner";
-import { ArrowLeftIcon, MapPinIcon, ImageIcon, HomeIcon } from "lucide-react";
-
-// Mock amenities list
-const amenitiesList = [
-  "WiFi", "AC", "TV", "Laundry", "Parking", "Kitchen", "Gym", 
-  "Power Backup", "CCTV", "Lift", "Drinking Water", "Hot Water",
-  "Study Table", "Refrigerator", "Microwave", "Common Room"
-];
+import { ArrowLeftIcon } from "lucide-react";
+import { GoogleMap, LoadScript, Marker, Autocomplete } from '@react-google-maps/api';
+import { supabase } from "@/lib/supabase";
 
 const AddHostel = () => {
   const navigate = useNavigate();
-  const [isLoading, setIsLoading] = useState(false);
-  const [formData, setFormData] = useState({
-    name: "",
-    type: "Boys", // Default value
-    description: "",
-    address: "",
-    city: "",
-    state: "",
-    pincode: "",
-    contactNumber: "",
-    amenities: [] as string[],
-    agreeToTerms: false,
+  const form = useForm({
+    defaultValues: {
+      hostelType: "",
+      hostelName: "",
+      address: "",
+      city: "",
+      state: "",
+      agentNotes: "",
+      videoUrls: [""],
+    },
   });
 
-  const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
-    const { name, value } = e.target;
-    setFormData(prev => ({ ...prev, [name]: value }));
-  };
+  const [mapCenter, setMapCenter] = useState({ lat: 17.385044, lng: 78.486671 });
+  const [markerPosition, setMarkerPosition] = useState(mapCenter);
+  const autocompleteRef = useRef<google.maps.places.Autocomplete | null>(null);
 
-  const handleAmenityToggle = (amenity: string) => {
-    setFormData(prev => {
-      if (prev.amenities.includes(amenity)) {
-        return {
-          ...prev,
-          amenities: prev.amenities.filter(a => a !== amenity)
-        };
-      } else {
-        return {
-          ...prev,
-          amenities: [...prev.amenities, amenity]
-        };
+  const onSubmit = async (data: any) => {
+    const { data: userData } = await supabase.auth.getUser();
+    const userId = userData?.user?.id;
+
+    if (!userId) {
+      toast.error("You must be logged in to submit a hostel.");
+      return;
+    }
+
+    // Upload images to Supabase Storage before inserting hostel
+    const uploadedImageUrls: string[] = [];
+
+    if (data.hostelImages && data.hostelImages.length > 0) {
+      for (const file of Array.from(data.hostelImages)) {
+        const sanitizedFileName = file.name
+          .toLowerCase()
+          .replace(/\s+/g, "-")             // Replace spaces with dashes
+          .replace(/[^\w.-]+/g, "");        // Remove special characters
+
+        const filePath = `${userId}/${Date.now()}-${sanitizedFileName}`;
+        const { data: uploadData, error: uploadError } = await supabase.storage
+          .from("hostel-images")
+          .upload(filePath, file);
+
+        if (uploadError) {
+          console.error("Upload error:", uploadError.message);
+          toast.error("Image upload failed.");
+          return;
+        }
+
+        // Use the correct way to get public URL as per new logic
+        const { data: publicUrlData } = supabase.storage
+          .from("hostel-images")
+          .getPublicUrl(filePath);
+        const publicUrl = publicUrlData?.publicUrl;
+
+        uploadedImageUrls.push(publicUrl);
       }
-    });
-  };
+    }
 
-  const handleSubmit = (e: React.FormEvent) => {
-    e.preventDefault();
-    
-    // Validation
-    if (formData.name.trim() === "") {
-      toast.error("Hostel name is required");
+    const { error } = await supabase.from("hostels").insert([
+      {
+        name: data.hostelName,
+        type: data.hostelType,
+        description: data.agentNotes || "",
+        address: {
+          address: data.address,
+          city: data.city,
+          state: data.state
+        },
+        lat: data.lat,
+        lng: data.lng,
+        status: "draft",
+        images: uploadedImageUrls,
+        video_url: data.videoUrls?.[0] || null,
+        updated_at: new Date().toISOString(),
+        created_by: "owner"
+      }
+    ]);
+
+    if (error) {
+      console.error(error);
+      toast.error("Failed to submit hostel");
       return;
     }
-    
-    if (formData.address.trim() === "") {
-      toast.error("Address is required");
-      return;
-    }
-    
-    if (!formData.agreeToTerms) {
-      toast.error("You must agree to the terms and conditions");
-      return;
-    }
-    
-    setIsLoading(true);
-    
-    // Simulating API call to submit hostel
-    setTimeout(() => {
-      setIsLoading(false);
-      toast.success("Hostel submitted for review!");
-      navigate("/owner/dashboard");
-    }, 2000);
+
+    toast.success("Hostel submitted successfully!");
+    navigate("/owner/dashboard");
   };
 
   return (
-    <div className="container mx-auto px-4 py-6 max-w-3xl">
+    <div>
       <Button 
         variant="ghost" 
         className="mb-6"
@@ -94,253 +110,237 @@ const AddHostel = () => {
         <ArrowLeftIcon className="h-4 w-4 mr-2" />
         Back to Dashboard
       </Button>
-      
-      <header className="mb-8">
-        <h1 className="text-2xl font-bold flex items-center gap-2">
-          <HomeIcon className="h-6 w-6" /> Add New Hostel
-        </h1>
-        <p className="text-gray-500">Fill in the details to list your hostel on OneTo7</p>
-      </header>
 
-      <form onSubmit={handleSubmit} className="space-y-8">
-        {/* Basic Information */}
+      <h1 className="text-2xl font-bold mb-6">Add Hostel</h1>
+
+      <div className="max-w-4xl">
         <Card>
           <CardHeader>
-            <h2 className="text-xl font-semibold">Basic Information</h2>
-          </CardHeader>
-          <CardContent className="space-y-4">
-            <div>
-              <Label htmlFor="name">Hostel Name *</Label>
-              <Input 
-                id="name" 
-                name="name"
-                placeholder="E.g. Royal Boys Hostel" 
-                value={formData.name}
-                onChange={handleInputChange}
-              />
-            </div>
-            
-            <div>
-              <Label>Hostel Type *</Label>
-              <RadioGroup 
-                defaultValue={formData.type} 
-                onValueChange={(value) => setFormData(prev => ({ ...prev, type: value }))}
-                className="flex flex-wrap gap-4 mt-2"
-              >
-                <div className="flex items-center space-x-2">
-                  <RadioGroupItem value="Boys" id="boys" />
-                  <Label htmlFor="boys" className="cursor-pointer">Boys</Label>
-                </div>
-                <div className="flex items-center space-x-2">
-                  <RadioGroupItem value="Girls" id="girls" />
-                  <Label htmlFor="girls" className="cursor-pointer">Girls</Label>
-                </div>
-                <div className="flex items-center space-x-2">
-                  <RadioGroupItem value="Co-ed" id="co-ed" />
-                  <Label htmlFor="co-ed" className="cursor-pointer">Co-ed</Label>
-                </div>
-              </RadioGroup>
-            </div>
-            
-            <div>
-              <Label htmlFor="description">Description</Label>
-              <Textarea 
-                id="description" 
-                name="description"
-                placeholder="Tell us about your hostel, its unique features, and nearby landmarks" 
-                value={formData.description}
-                onChange={handleInputChange}
-                rows={4}
-              />
-            </div>
-          </CardContent>
-        </Card>
-
-        {/* Location */}
-        <Card>
-          <CardHeader>
-            <h2 className="text-xl font-semibold">Location</h2>
-          </CardHeader>
-          <CardContent className="space-y-4">
-            <div>
-              <Label htmlFor="address">Full Address *</Label>
-              <Textarea 
-                id="address" 
-                name="address"
-                placeholder="Enter complete address with building name, street, etc." 
-                value={formData.address}
-                onChange={handleInputChange}
-                rows={3}
-              />
-            </div>
-            
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-              <div>
-                <Label htmlFor="city">City *</Label>
-                <Input 
-                  id="city" 
-                  name="city"
-                  placeholder="E.g. Mumbai" 
-                  value={formData.city}
-                  onChange={handleInputChange}
-                />
-              </div>
-              <div>
-                <Label htmlFor="state">State *</Label>
-                <Input 
-                  id="state" 
-                  name="state"
-                  placeholder="E.g. Maharashtra" 
-                  value={formData.state}
-                  onChange={handleInputChange}
-                />
-              </div>
-              <div>
-                <Label htmlFor="pincode">Pincode *</Label>
-                <Input 
-                  id="pincode" 
-                  name="pincode"
-                  placeholder="E.g. 400001" 
-                  value={formData.pincode}
-                  onChange={handleInputChange}
-                  maxLength={6}
-                />
-              </div>
-            </div>
-            
-            <div>
-              <Button 
-                type="button" 
-                variant="outline"
-                className="w-full md:w-auto gap-2"
-              >
-                <MapPinIcon className="h-4 w-4" />
-                Choose on Map
-              </Button>
-              <p className="text-xs text-gray-500 mt-1">
-                Select the precise location to help users find your hostel
-              </p>
-            </div>
-          </CardContent>
-        </Card>
-
-        {/* Amenities */}
-        <Card>
-          <CardHeader>
-            <h2 className="text-xl font-semibold">Amenities</h2>
+            <h2 className="text-lg font-medium">Hostel Information</h2>
+            <p className="text-sm text-gray-500">
+              Add details to list your hostel
+            </p>
           </CardHeader>
           <CardContent>
-            <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
-              {amenitiesList.map((amenity) => (
-                <div key={amenity} className="flex items-center space-x-2">
-                  <Checkbox 
-                    id={`amenity-${amenity}`} 
-                    checked={formData.amenities.includes(amenity)}
-                    onCheckedChange={() => handleAmenityToggle(amenity)}
-                  />
-                  <label 
-                    htmlFor={`amenity-${amenity}`}
-                    className="text-sm cursor-pointer"
+            <Form {...form}>
+              <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
+                {/* Hostel Information */}
+                <div className="space-y-4">
+                  <div className="mb-4">
+                    <label htmlFor="hostelType" className="block text-sm font-medium mb-1">Hostel Type *</label>
+                    <select 
+                      id="hostelType" 
+                      className="w-full p-2 border rounded"
+                      {...form.register("hostelType", { required: true })}
+                    >
+                      <option value="">Select Hostel Type</option>
+                      <option value="boys">Boys</option>
+                      <option value="girls">Girls</option>
+                      <option value="coed">Co-ed</option>
+                    </select>
+                  </div>
+                  <div>
+                    <label htmlFor="hostelName" className="block text-sm font-medium mb-1">Hostel Name *</label>
+                    <Input 
+                      id="hostelName"
+                      placeholder="E.g., Royal Boys Hostel" 
+                      {...form.register("hostelName", { required: true })}
+                    />
+                  </div>
+
+                  {/* Location Section */}
+                  <div className="pt-4 border-t">
+                    <h3 className="font-medium mb-3">Hostel Location</h3>
+                    <div>
+                      <label htmlFor="address" className="block text-sm font-medium mb-1">Address *</label>
+                      <Textarea
+                        id="address"
+                        placeholder="Complete address with building name, street, etc."
+                        rows={3}
+                        {...form.register("address", { required: true })}
+                      />
+                    </div>
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mt-4">
+                      <div>
+                        <label htmlFor="city" className="block text-sm font-medium mb-1">City *</label>
+                        <Input 
+                          id="city"
+                          placeholder="E.g., Mumbai" 
+                          {...form.register("city", { required: true })} 
+                        />
+                      </div>
+                      <div>
+                        <label htmlFor="state" className="block text-sm font-medium mb-1">State *</label>
+                        <Input 
+                          id="state"
+                          placeholder="E.g., Maharashtra" 
+                          {...form.register("state", { required: true })} 
+                        />
+                      </div>
+                    </div>
+                    {/* Google Maps Location Picker */}
+                    <div className="mt-4">
+                      <label htmlFor="location" className="block text-sm font-medium mb-1">
+                        Hostel Location on Map *
+                      </label>
+                      <LoadScript googleMapsApiKey={import.meta.env.VITE_GOOGLE_MAPS_API_KEY} libraries={['places']}>
+                        <Autocomplete
+                          onLoad={(autocomplete) => (autocompleteRef.current = autocomplete)}
+                          onPlaceChanged={() => {
+                            const place = autocompleteRef.current?.getPlace();
+                            if (place?.geometry?.location) {
+                              const lat = place.geometry.location.lat();
+                              const lng = place.geometry.location.lng();
+                              setMapCenter({ lat, lng });
+                              setMarkerPosition({ lat, lng });
+                              form.setValue('lat', lat);
+                              form.setValue('lng', lng);
+
+                              const components = place.address_components || [];
+                              const address = place.formatted_address || "";
+                              const city = components.find(c => c.types.includes("locality"))?.long_name || "";
+                              const state = components.find(c => c.types.includes("administrative_area_level_1"))?.long_name || "";
+
+                              form.setValue("address", address);
+                              form.setValue("city", city);
+                              form.setValue("state", state);
+                            }
+                          }}
+                        >
+                          <Input
+                            placeholder="Search for hostel location..."
+                            className="mb-2"
+                          />
+                        </Autocomplete>
+                        <GoogleMap
+                          center={mapCenter}
+                          zoom={15}
+                          mapContainerStyle={{ width: '100%', height: '256px' }}
+                          onClick={(e) => {
+                            const lat = e.latLng?.lat() || 0;
+                            const lng = e.latLng?.lng() || 0;
+                            setMarkerPosition({ lat, lng });
+                            form.setValue('lat', lat);
+                            form.setValue('lng', lng);
+                          }}
+                        >
+                          <Marker position={markerPosition} />
+                        </GoogleMap>
+                      </LoadScript>
+                      <div className="grid grid-cols-2 gap-4 mt-2">
+                        <div>
+                          <label htmlFor="lat" className="block text-sm font-medium mb-1">Latitude *</label>
+                          <Input 
+                            id="lat"
+                            placeholder="17.385044"
+                            {...form.register("lat", { required: true })}
+                          />
+                        </div>
+                        <div>
+                          <label htmlFor="lng" className="block text-sm font-medium mb-1">Longitude *</label>
+                          <Input 
+                            id="lng"
+                            placeholder="78.486671"
+                            {...form.register("lng", { required: true })}
+                          />
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Agent Notes */}
+                  <div className="pt-4 border-t">
+                    <h3 className="font-medium mb-3">Additional Notes</h3>
+                    <div>
+                      <label htmlFor="agentNotes" className="block text-sm font-medium mb-1">Additional Notes</label>
+                      <Textarea
+                        id="agentNotes"
+                        placeholder="Any additional information or observations about this hostel"
+                        rows={4}
+                        {...form.register("agentNotes")}
+                      />
+                    </div>
+                  </div>
+
+                  {/* Hostel Media */}
+                  <div className="pt-4 border-t">
+                    <h3 className="font-medium mb-3">Hostel Media</h3>
+                    <div className="mb-4">
+                      <label htmlFor="hostelImages" className="block text-sm font-medium mb-1">Upload Hostel Images *</label>
+                      <input
+                        type="file"
+                        id="hostelImages"
+                        accept="image/png, image/jpeg"
+                        multiple
+                        className="w-full p-2 border rounded"
+                        {...form.register("hostelImages", {
+                          validate: (files: FileList) => {
+                            for (let i = 0; i < files.length; i++) {
+                              const file = files[i];
+                              if (file.size > 5 * 1024 * 1024) return "Image too large (max 5MB)";
+                            }
+                            return true;
+                          }
+                        })}
+                      />
+                      <p className="mt-1 text-xs text-gray-500">You can upload multiple images (JPG, PNG).</p>
+                      {form.watch("hostelImages") && Array.from(form.watch("hostelImages")).map((file: File, index: number) => (
+                        <img key={index} src={URL.createObjectURL(file)} alt="Preview" className="w-24 h-24 object-cover inline-block mr-2 mt-2 rounded" />
+                      ))}
+                    </div>
+                    <div className="mb-4">
+                      <label className="block text-sm font-medium mb-1">Video Links (Optional)</label>
+                      {form.watch("videoUrls")?.map((_: string, index: number) => (
+                        <div key={index} className="flex gap-2 mb-2">
+                          <Input
+                            placeholder={`https://youtu.be/video${index + 1}`}
+                            {...form.register(`videoUrls.${index}` as const)}
+                          />
+                          <Button
+                            type="button"
+                            variant="ghost"
+                            onClick={() => {
+                              const current = form.getValues("videoUrls") || [];
+                              form.setValue("videoUrls", current.filter((_, i) => i !== index));
+                            }}
+                          >
+                            Remove
+                          </Button>
+                        </div>
+                      ))}
+                      <Button
+                        type="button"
+                        variant="outline"
+                        onClick={() => {
+                          const current = form.getValues("videoUrls") || [];
+                          form.setValue("videoUrls", [...current, ""]);
+                        }}
+                      >
+                        Add Video Link
+                      </Button>
+                    </div>
+                  </div>
+
+                </div>
+
+                <div className="flex flex-col sm:flex-row gap-4 pt-4 border-t">
+                  <Button
+                    type="button"
+                    variant="outline"
+                    className="flex-1"
+                    onClick={() => navigate("/owner/dashboard")}
                   >
-                    {amenity}
-                  </label>
+                    Cancel
+                  </Button>
+                  <Button type="submit" className="flex-1">
+                    Submit for Review
+                  </Button>
                 </div>
-              ))}
-            </div>
+              </form>
+            </Form>
           </CardContent>
         </Card>
-
-        {/* Contact & Support */}
-        <Card>
-          <CardHeader>
-            <h2 className="text-xl font-semibold">Contact & Support</h2>
-          </CardHeader>
-          <CardContent>
-            <div>
-              <Label htmlFor="contactNumber">Support Contact Number *</Label>
-              <Input 
-                id="contactNumber" 
-                name="contactNumber"
-                placeholder="Contact number for hostel inquiries" 
-                value={formData.contactNumber}
-                onChange={handleInputChange}
-              />
-              <p className="text-xs text-gray-500 mt-1">
-                This number will be visible to users for hostel-specific inquiries
-              </p>
-            </div>
-          </CardContent>
-        </Card>
-
-        {/* Media Upload */}
-        <Card>
-          <CardHeader>
-            <h2 className="text-xl font-semibold">Photos & Videos</h2>
-          </CardHeader>
-          <CardContent>
-            <div className="border-2 border-dashed border-gray-300 rounded-md p-8 text-center">
-              <ImageIcon className="h-8 w-8 mx-auto text-gray-400" />
-              <h3 className="mt-2 text-sm font-medium">Upload Hostel Images</h3>
-              <p className="mt-1 text-xs text-gray-500">
-                Upload clear images of rooms, common areas, and exterior. JPEG, PNG, or GIF only.
-              </p>
-              <Button 
-                type="button" 
-                variant="outline" 
-                className="mt-4"
-              >
-                Upload Images
-              </Button>
-            </div>
-          </CardContent>
-        </Card>
-
-        {/* Terms & Submit */}
-        <Card>
-          <CardContent className="p-6">
-            <div className="flex items-center space-x-2 mb-6">
-              <Checkbox 
-                id="terms" 
-                checked={formData.agreeToTerms}
-                onCheckedChange={(checked) => 
-                  setFormData(prev => ({ ...prev, agreeToTerms: checked as boolean }))
-                }
-              />
-              <label 
-                htmlFor="terms"
-                className="text-sm"
-              >
-                I confirm that the information provided is accurate and I agree to the <a href="#" className="text-blue-600">Terms & Conditions</a>
-              </label>
-            </div>
-            
-            <div className="flex flex-col sm:flex-row gap-4">
-              <Button
-                type="button"
-                variant="outline"
-                className="flex-1"
-                onClick={() => navigate("/owner/dashboard")}
-              >
-                Cancel
-              </Button>
-              <Button 
-                type="submit"
-                className="flex-1"
-                disabled={isLoading}
-              >
-                {isLoading ? (
-                  <>
-                    <span className="animate-spin mr-2">⏳</span> 
-                    Submitting...
-                  </>
-                ) : (
-                  "Submit for Review"
-                )}
-              </Button>
-            </div>
-          </CardContent>
-        </Card>
-      </form>
+      </div>
     </div>
   );
 };

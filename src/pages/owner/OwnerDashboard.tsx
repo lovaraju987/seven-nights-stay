@@ -1,39 +1,52 @@
-
-import React from "react";
+import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { Card, CardContent, CardHeader } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { 
-  HomeIcon, 
-  BedDoubleIcon, 
-  CalendarIcon, 
-  CreditCardIcon, 
+import {
+  HomeIcon,
+  BedDoubleIcon,
+  CalendarIcon,
+  CreditCardIcon,
   BarChartIcon,
   QrCodeIcon,
   PlusIcon
 } from "lucide-react";
-
-// Mock data for demonstration
-const mockData = {
-  hostelName: "Royal Boys Hostel",
-  status: "Verified",
-  occupancyRate: 75,
-  monthlyEarnings: 45000,
-  activeBookings: 12,
-  hasHostel: true // toggle to show different UI states
-};
+import { supabase } from "@/lib/supabase";
 
 const OwnerDashboard = () => {
   const navigate = useNavigate();
+
+  const [hostelData, setHostelData] = useState<any>(null);
+  const [isLoading, setIsLoading] = useState(true);
+  const [hostels, setHostels] = useState<any[]>([]);
+
+  useEffect(() => {
+    const fetchHostels = async () => {
+      const { data: userData, error: authError } = await supabase.auth.getUser();
+      if (authError || !userData?.user?.id) {
+        console.error("Auth error or no user:", authError);
+        setIsLoading(false);
+        return;
+      }
   
-  // Simulate loading owner data
-  const [isLoading, setIsLoading] = React.useState(true);
+      const ownerId = userData.user.id;
   
-  React.useEffect(() => {
-    // Simulate API call to fetch owner data
-    setTimeout(() => {
+      const { data: hostelsData, error } = await supabase
+        .from("hostels")
+        .select("*")
+        .eq("created_by", "owner")
+        .eq("owner_id", ownerId); // Ensure this column exists and is populated on insert
+  
+      if (error) {
+        console.error("Failed to fetch hostels:", error.message);
+      } else {
+        setHostels(hostelsData || []);
+      }
+  
       setIsLoading(false);
-    }, 1500);
+    };
+  
+    fetchHostels();
   }, []);
 
   if (isLoading) {
@@ -51,22 +64,22 @@ const OwnerDashboard = () => {
         <h1 className="text-2xl font-bold mb-1">Owner Dashboard</h1>
         <p className="text-gray-500">Manage your hostel listings and bookings</p>
       </header>
-      
-      {mockData.hasHostel ? (
+
+      {hostelData ? (
         <div className="space-y-6">
           {/* Hostel Status Card */}
           <Card className="overflow-hidden border-l-4 border-l-green-500">
             <CardContent className="p-6">
               <div className="flex justify-between items-center flex-wrap gap-4">
                 <div>
-                  <h2 className="text-xl font-bold">{mockData.hostelName}</h2>
+                  <h2 className="text-xl font-bold">{hostelData.name}</h2>
                   <div className="flex items-center mt-1">
                     <span className="bg-green-100 text-green-800 text-xs px-2 py-1 rounded-full font-medium">
-                      {mockData.status}
+                      {hostelData.status || "Verified"}
                     </span>
                   </div>
                 </div>
-                <Button onClick={() => navigate(`/owner/manage-hostel/1`)}>
+                <Button onClick={() => navigate(`/owner/manage-hostel/${hostelData.id}`)}>
                   Manage Hostel
                 </Button>
               </div>
@@ -79,32 +92,32 @@ const OwnerDashboard = () => {
               <CardContent className="p-6">
                 <div className="flex flex-col">
                   <span className="text-gray-500 text-sm mb-1">Occupancy Rate</span>
-                  <span className="text-2xl font-bold">{mockData.occupancyRate}%</span>
+                  <span className="text-2xl font-bold">{hostelData.occupancyRate}%</span>
                   <div className="w-full bg-gray-200 rounded-full h-2.5 mt-2">
-                    <div 
-                      className="bg-blue-600 h-2.5 rounded-full" 
-                      style={{ width: `${mockData.occupancyRate}%` }}
+                    <div
+                      className="bg-blue-600 h-2.5 rounded-full"
+                      style={{ width: `${hostelData.occupancyRate}%` }}
                     ></div>
                   </div>
                 </div>
               </CardContent>
             </Card>
-            
+
             <Card>
               <CardContent className="p-6">
                 <div className="flex flex-col">
                   <span className="text-gray-500 text-sm mb-1">Monthly Earnings</span>
-                  <span className="text-2xl font-bold">₹{mockData.monthlyEarnings}</span>
+                  <span className="text-2xl font-bold">₹{hostelData.monthlyEarnings}</span>
                   <span className="text-green-600 text-xs mt-2">+15% from last month</span>
                 </div>
               </CardContent>
             </Card>
-            
+
             <Card>
               <CardContent className="p-6">
                 <div className="flex flex-col">
                   <span className="text-gray-500 text-sm mb-1">Active Bookings</span>
-                  <span className="text-2xl font-bold">{mockData.activeBookings}</span>
+                  <span className="text-2xl font-bold">{hostelData.activeBookings}</span>
                   <span className="text-blue-600 text-xs mt-2">
                     <button onClick={() => navigate('/owner/bookings')} className="underline">View all</button>
                   </span>
@@ -117,44 +130,44 @@ const OwnerDashboard = () => {
           <div>
             <h3 className="text-lg font-medium mb-4">Quick Actions</h3>
             <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
-              <Button 
-                variant="outline" 
+              <Button
+                variant="outline"
                 className="h-20 flex flex-col items-center justify-center"
-                onClick={() => navigate('/owner/manage-rooms/1')}
+                onClick={() => navigate(`/owner/manage-rooms/${hostelData.id}`)}
               >
                 <BedDoubleIcon className="h-5 w-5 mb-1" />
                 <span>Manage Rooms</span>
               </Button>
-              
-              <Button 
-                variant="outline" 
+
+              <Button
+                variant="outline"
                 className="h-20 flex flex-col items-center justify-center"
                 onClick={() => navigate('/owner/bookings')}
               >
                 <CalendarIcon className="h-5 w-5 mb-1" />
                 <span>View Bookings</span>
               </Button>
-              
-              <Button 
-                variant="outline" 
+
+              <Button
+                variant="outline"
                 className="h-20 flex flex-col items-center justify-center"
                 onClick={() => navigate('/owner/subscription')}
               >
                 <CreditCardIcon className="h-5 w-5 mb-1" />
                 <span>Subscription</span>
               </Button>
-              
-              <Button 
-                variant="outline" 
+
+              <Button
+                variant="outline"
                 className="h-20 flex flex-col items-center justify-center"
-                onClick={() => navigate('/owner/qr-storefront/1')}
+                onClick={() => navigate(`/owner/qr-storefront/${hostelData.id}`)}
               >
                 <QrCodeIcon className="h-5 w-5 mb-1" />
                 <span>QR Storefront</span>
               </Button>
-              
-              <Button 
-                variant="outline" 
+
+              <Button
+                variant="outline"
                 className="h-20 flex flex-col items-center justify-center"
                 onClick={() => navigate('/owner/analytics')}
               >
