@@ -86,7 +86,9 @@ const AddHostel = () => {
         images: uploadedImageUrls,
         video_url: data.videoUrls?.[0] || null,
         updated_at: new Date().toISOString(),
-        created_by: "owner"
+        created_by: "owner",
+        owner_id: userId, // ✅ add this line
+
       }
     ]);
 
