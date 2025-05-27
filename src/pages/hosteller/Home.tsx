@@ -5,84 +5,12 @@ import { Button } from "@/components/ui/button";
 import { Search, MapPin, Star, Filter, User, Calendar, Heart, Navigation, Wifi, Coffee, Wind, Shirt } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { toast } from "@/hooks/use-toast";
+import { supabase } from "@/lib/supabase";
 
-// Mock data for hostels
-const mockHostels = [
-  {
-    id: "1",
-    name: "Backpackers Haven",
-    gender: "co-ed",
-    location: "Koramangala, Bangalore",
-    rating: 4.7,
-    price: 599,
-    availableBeds: 8,
-    image: "https://images.unsplash.com/photo-1555854877-bab0e564b8d5?crop=entropy&cs=tinysrgb&fit=crop&fm=jpg&h=250&ixid=MnwxfDB8MXxyYW5kb218MHx8aG9zdGVsfHx8fHx8MTY4NDc0NjQ5OQ&ixlib=rb-4.0.3&q=80&w=400",
-    amenities: {
-      wifi: true,
-      ac: true,
-      food: true,
-      laundry: false,
-      cleaning: true
-    },
-    mapUrl: "https://www.google.com/maps?q=Koramangala,Bangalore"
-  },
-  {
-    id: "2",
-    name: "Horizon Boys Hostel",
-    gender: "boys",
-    location: "HSR Layout, Bangalore",
-    rating: 4.3,
-    price: 649,
-    availableBeds: 5,
-    image: "https://images.unsplash.com/photo-1613977257363-707ba9348227?crop=entropy&cs=tinysrgb&fit=crop&fm=jpg&h=250&ixid=MnwxfDB8MXxyYW5kb218MHx8aG9zdGVsfHx8fHx8MTY4NDc0NjUwMA&ixlib=rb-4.0.3&q=80&w=400",
-    amenities: {
-      wifi: true,
-      ac: false,
-      food: true,
-      laundry: true,
-      cleaning: false
-    },
-    mapUrl: "https://www.google.com/maps?q=HSR+Layout,Bangalore"
-  },
-  {
-    id: "3",
-    name: "Sunrise Girls PG",
-    gender: "girls",
-    location: "Indiranagar, Bangalore",
-    rating: 4.8,
-    price: 679,
-    availableBeds: 3,
-    image: "https://images.unsplash.com/photo-1555854877-bab0e564b8d5?crop=entropy&cs=tinysrgb&fit=crop&fm=jpg&h=250&ixid=MnwxfDB8MXxyYW5kb218MHx8aG9zdGVsfHx8fHx8MTY4NDc0NjQ5OQ&ixlib=rb-4.0.3&q=80&w=400",
-    amenities: {
-      wifi: true,
-      ac: true,
-      food: true,
-      laundry: true,
-      cleaning: true
-    },
-    mapUrl: "https://www.google.com/maps?q=Indiranagar,Bangalore"
-  },
-  {
-    id: "4",
-    name: "Urban Nest Co-Living",
-    gender: "co-ed",
-    location: "Whitefield, Bangalore",
-    rating: 4.5,
-    price: 699,
-    availableBeds: 12,
-    image: "https://images.unsplash.com/photo-1613977257363-707ba9348227?crop=entropy&cs=tinysrgb&fit=crop&fm=jpg&h=250&ixid=MnwxfDB8MXxyYW5kb218MHx8aG9zdGVsfHx8fHx8MTY4NDc0NjUwMA&ixlib=rb-4.0.3&q=80&w=400",
-    amenities: {
-      wifi: true,
-      ac: false,
-      food: false,
-      laundry: true,
-      cleaning: true
-    },
-    mapUrl: "https://www.google.com/maps?q=Whitefield,Bangalore"
-  }
-];
-
+// Real data for hostels
 const Home = () => {
+  const [hostels, setHostels] = useState<any[]>([]);
+
   const [searchQuery, setSearchQuery] = useState("");
   const [selectedFilter, setSelectedFilter] = useState<string | null>(null);
   const [wishlistedHostelIds, setWishlistedHostelIds] = useState<string[]>([]);
@@ -101,8 +29,25 @@ const Home = () => {
     { id: "co-ed", label: "Co-ed", icon: <User className="h-3.5 w-3.5" /> }
   ];
 
-  // Load wishlisted hostel IDs and filters from localStorage on component mount
+  // Fetch hostels from Supabase
   useEffect(() => {
+    const fetchHostels = async () => {
+      const { data, error } = await supabase
+        .from("hostels")
+        .select("*");
+      console.log({ hostels: data, error });
+      if (error) {
+        console.error("Error fetching hostels:", error);
+        toast({
+          description: `Failed to load hostels: ${error.message}`,
+        });
+        return;
+      } else {
+        setHostels(data || []);
+      }
+    };
+    fetchHostels();
+    
     // Load wishlist
     const storedWishlist = localStorage.getItem("hostelWishlist");
     if (storedWishlist) {
@@ -135,7 +80,7 @@ const Home = () => {
     setSelectedFilter(selectedFilter === filterId ? null : filterId);
   };
 
-  const filteredHostels = mockHostels.filter(hostel => {
+  const filteredHostels = hostels.filter(hostel => {
     // Text search filter
     const matchesSearch = hostel.name.toLowerCase().includes(searchQuery.toLowerCase()) || 
                          hostel.location.toLowerCase().includes(searchQuery.toLowerCase());
@@ -221,7 +166,8 @@ const Home = () => {
   };
 
   // Function to render amenity icons
-  const renderAmenityIcons = (amenities: any) => {
+  const renderAmenityIcons = (amenities: any = {}) => {
+    if (!amenities) return null;
     return (
       <div className="flex space-x-2 mb-2">
         {amenities.wifi && <Wifi className="h-4 w-4 text-blue-500" />}
