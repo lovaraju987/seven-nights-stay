@@ -10,11 +10,24 @@ import { useForm } from "react-hook-form";
 import { toast } from "@/components/ui/sonner";
 import { ArrowLeftIcon } from "lucide-react";
 import { GoogleMap, LoadScript, Marker, Autocomplete } from '@react-google-maps/api';
-import { supabase } from "@/lib/supabase";
+import { supabase } from "@/integrations/supabase/client";
+
+interface FormData {
+  hostelType: string;
+  hostelName: string;
+  address: string;
+  city: string;
+  state: string;
+  agentNotes: string;
+  videoUrls: string[];
+  lat: number;
+  lng: number;
+  hostelImages: FileList;
+}
 
 const AddHostel = () => {
   const navigate = useNavigate();
-  const form = useForm({
+  const form = useForm<FormData>({
     defaultValues: {
       hostelType: "",
       hostelName: "",
@@ -23,6 +36,8 @@ const AddHostel = () => {
       state: "",
       agentNotes: "",
       videoUrls: [""],
+      lat: 17.385044,
+      lng: 78.486671,
     },
   });
 
@@ -30,7 +45,7 @@ const AddHostel = () => {
   const [markerPosition, setMarkerPosition] = useState(mapCenter);
   const autocompleteRef = useRef<google.maps.places.Autocomplete | null>(null);
 
-  const onSubmit = async (data: any) => {
+  const onSubmit = async (data: FormData) => {
     const { data: userData } = await supabase.auth.getUser();
     const userId = userData?.user?.id;
 
@@ -44,7 +59,7 @@ const AddHostel = () => {
 
     if (data.hostelImages && data.hostelImages.length > 0) {
       for (const file of Array.from(data.hostelImages)) {
-        const sanitizedFileName = file.name
+        const sanitizedFileName = (file as File).name
           .toLowerCase()
           .replace(/\s+/g, "-")             // Replace spaces with dashes
           .replace(/[^\w.-]+/g, "");        // Remove special characters
@@ -52,7 +67,7 @@ const AddHostel = () => {
         const filePath = `${userId}/${Date.now()}-${sanitizedFileName}`;
         const { data: uploadData, error: uploadError } = await supabase.storage
           .from("hostel-images")
-          .upload(filePath, file);
+          .upload(filePath, file as File);
 
         if (uploadError) {
           console.error("Upload error:", uploadError.message);
@@ -87,7 +102,7 @@ const AddHostel = () => {
         video_url: data.videoUrls?.[0] || null,
         updated_at: new Date().toISOString(),
         created_by: "owner",
-        owner_id: userId, // ✅ add this line
+        owner_id: userId,
 
       }
     ]);
@@ -235,7 +250,7 @@ const AddHostel = () => {
                           <Input 
                             id="lat"
                             placeholder="17.385044"
-                            {...form.register("lat", { required: true })}
+                            {...form.register("lat", { required: true, valueAsNumber: true })}
                           />
                         </div>
                         <div>
@@ -243,7 +258,7 @@ const AddHostel = () => {
                           <Input 
                             id="lng"
                             placeholder="78.486671"
-                            {...form.register("lng", { required: true })}
+                            {...form.register("lng", { required: true, valueAsNumber: true })}
                           />
                         </div>
                       </div>
@@ -286,7 +301,7 @@ const AddHostel = () => {
                         })}
                       />
                       <p className="mt-1 text-xs text-gray-500">You can upload multiple images (JPG, PNG).</p>
-                      {form.watch("hostelImages") && Array.from(form.watch("hostelImages")).map((file: File, index: number) => (
+                      {form.watch("hostelImages") && form.watch("hostelImages").length > 0 && Array.from(form.watch("hostelImages")).map((file: File, index: number) => (
                         <img key={index} src={URL.createObjectURL(file)} alt="Preview" className="w-24 h-24 object-cover inline-block mr-2 mt-2 rounded" />
                       ))}
                     </div>
