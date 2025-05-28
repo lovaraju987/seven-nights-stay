@@ -1,5 +1,4 @@
-
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardFooter } from "@/components/ui/card";
 import { Avatar } from "@/components/ui/avatar";
@@ -7,36 +6,88 @@ import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { MapPin, Calendar, Phone, LogOut, User, Settings, HelpCircle, Shield, Bell, CreditCard, Camera } from "lucide-react";
+import { MapPin, Calendar, Phone, LogOut, User, Settings, HelpCircle, Shield, Bell, CreditCard, Camera, Loader2 } from "lucide-react";
 import { Switch } from "@/components/ui/switch";
 import { useNavigate } from "react-router-dom";
 import { toast } from "@/components/ui/sonner";
+import { useAuth } from "@/hooks/useAuth";
 
 const Profile = () => {
   const navigate = useNavigate();
+  const { user, profile, loading, updateProfile, signOut } = useAuth();
   
-  // Mock data
-  const [profile, setProfile] = useState({
-    name: "Raj Kumar",
-    email: "raj.kumar@example.com",
-    phone: "+91 9876543210",
-    address: "42 Park Avenue, Indira Nagar, Bangalore",
-    bio: "Explorer and digital nomad. Love staying in hostels and meeting new people!",
-    profileImage: "",
-    verifiedEmail: true,
-    verifiedPhone: true,
-    verifiedId: true
+  // Local state for form data
+  const [formData, setFormData] = useState({
+    name: "",
+    phone: "",
+    emergency_contact: "",
   });
-  
-  const handleLogout = () => {
-    // In a real app, this would clear auth state
-    toast.success("Successfully logged out");
-    navigate("/role-selection");
+
+  const [isUpdating, setIsUpdating] = useState(false);
+
+  // Update form data when profile loads
+  useEffect(() => {
+    if (profile) {
+      setFormData({
+        name: profile.name || "",
+        phone: profile.phone || "",
+        emergency_contact: profile.emergency_contact || "",
+      });
+    }
+  }, [profile]);
+
+  // Redirect to login if not authenticated
+  useEffect(() => {
+    if (!loading && !user) {
+      navigate("/login");
+    }
+  }, [user, loading, navigate]);
+
+  const handleLogout = async () => {
+    const { error } = await signOut();
+    if (error) {
+      toast.error("Error logging out");
+    } else {
+      toast.success("Successfully logged out");
+      navigate("/role-selection");
+    }
   };
   
-  const handleSaveProfile = () => {
-    toast.success("Profile saved successfully");
+  const handleSaveProfile = async () => {
+    setIsUpdating(true);
+    try {
+      const { error } = await updateProfile(formData);
+      if (error) {
+        toast.error("Failed to update profile");
+      } else {
+        toast.success("Profile updated successfully");
+      }
+    } catch (error) {
+      toast.error("An error occurred while updating profile");
+    } finally {
+      setIsUpdating(false);
+    }
   };
+
+  const handleInputChange = (field: string, value: string) => {
+    setFormData(prev => ({
+      ...prev,
+      [field]: value
+    }));
+  };
+
+  if (loading) {
+    return (
+      <div className="flex flex-col min-h-screen bg-gray-50 items-center justify-center">
+        <Loader2 className="h-8 w-8 animate-spin" />
+        <p className="mt-2 text-gray-600">Loading profile...</p>
+      </div>
+    );
+  }
+
+  if (!user || !profile) {
+    return null; // Will redirect to login
+  }
 
   return (
     <div className="flex flex-col min-h-screen bg-gray-50">
@@ -62,37 +113,33 @@ const Profile = () => {
                 <div className="flex flex-col items-center mb-6">
                   <div className="relative">
                     <Avatar className="h-24 w-24 border-2 border-blue-500">
-                      {profile.profileImage ? (
-                        <img src={profile.profileImage} alt="Profile" className="h-full w-full object-cover" />
-                      ) : (
-                        <User className="h-12 w-12" />
-                      )}
+                      <User className="h-12 w-12" />
                     </Avatar>
                     <Button 
                       size="icon" 
                       className="absolute bottom-0 right-0 rounded-full h-8 w-8"
-                      onClick={() => document.getElementById('profile-upload')?.click()}
+                      onClick={() => toast.info("Photo upload coming soon!")}
                     >
                       <Camera className="h-4 w-4" />
-                      <input type="file" id="profile-upload" className="hidden" accept="image/*" />
                     </Button>
                   </div>
                   <h2 className="text-lg font-semibold mt-2">{profile.name}</h2>
+                  <p className="text-sm text-gray-500">{user.email}</p>
                   
                   <div className="flex flex-wrap justify-center gap-2 mt-2">
-                    {profile.verifiedEmail && (
+                    {user.email_confirmed_at && (
                       <div className="bg-green-50 text-green-700 text-xs rounded-full px-2 py-0.5 flex items-center">
                         <Shield className="h-3 w-3 mr-1" />
                         Email Verified
                       </div>
                     )}
-                    {profile.verifiedPhone && (
-                      <div className="bg-green-50 text-green-700 text-xs rounded-full px-2 py-0.5 flex items-center">
-                        <Shield className="h-3 w-3 mr-1" />
-                        Phone Verified
+                    {profile.phone && (
+                      <div className="bg-blue-50 text-blue-700 text-xs rounded-full px-2 py-0.5 flex items-center">
+                        <Phone className="h-3 w-3 mr-1" />
+                        Phone Added
                       </div>
                     )}
-                    {profile.verifiedId && (
+                    {profile.id_verified && (
                       <div className="bg-green-50 text-green-700 text-xs rounded-full px-2 py-0.5 flex items-center">
                         <Shield className="h-3 w-3 mr-1" />
                         ID Verified
@@ -106,8 +153,8 @@ const Profile = () => {
                     <Label htmlFor="name">Full Name</Label>
                     <Input 
                       id="name" 
-                      value={profile.name} 
-                      onChange={(e) => setProfile({...profile, name: e.target.value})} 
+                      value={formData.name} 
+                      onChange={(e) => handleInputChange('name', e.target.value)} 
                     />
                   </div>
                   
@@ -115,46 +162,46 @@ const Profile = () => {
                     <Label htmlFor="email">Email</Label>
                     <Input 
                       id="email" 
-                      value={profile.email} 
-                      onChange={(e) => setProfile({...profile, email: e.target.value})} 
+                      value={user.email || ""} 
+                      disabled
+                      className="bg-gray-100"
                     />
+                    <p className="text-xs text-gray-500 mt-1">Email cannot be changed here</p>
                   </div>
                   
                   <div>
                     <Label htmlFor="phone">Phone Number</Label>
                     <Input 
                       id="phone" 
-                      value={profile.phone} 
-                      onChange={(e) => setProfile({...profile, phone: e.target.value})} 
+                      value={formData.phone} 
+                      onChange={(e) => handleInputChange('phone', e.target.value)} 
+                      placeholder="+91 9876543210"
                     />
                   </div>
                   
                   <div>
-                    <Label htmlFor="address">Address</Label>
+                    <Label htmlFor="emergency_contact">Emergency Contact</Label>
                     <Input 
-                      id="address" 
-                      value={profile.address} 
-                      onChange={(e) => setProfile({...profile, address: e.target.value})} 
-                    />
-                  </div>
-                  
-                  <div>
-                    <Label htmlFor="bio">About Me</Label>
-                    <Textarea 
-                      id="bio" 
-                      value={profile.bio} 
-                      onChange={(e) => setProfile({...profile, bio: e.target.value})} 
-                      placeholder="Tell us a bit about yourself..."
-                      className="resize-none"
-                      rows={3}
+                      id="emergency_contact" 
+                      value={formData.emergency_contact} 
+                      onChange={(e) => handleInputChange('emergency_contact', e.target.value)} 
+                      placeholder="+91 9876543210"
                     />
                   </div>
                   
                   <Button 
                     className="w-full" 
                     onClick={handleSaveProfile}
+                    disabled={isUpdating}
                   >
-                    Save Changes
+                    {isUpdating ? (
+                      <>
+                        <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                        Saving...
+                      </>
+                    ) : (
+                      "Save Changes"
+                    )}
                   </Button>
                 </div>
               </CardContent>
@@ -165,35 +212,12 @@ const Profile = () => {
                 <h3 className="text-lg font-medium">Account Security</h3>
               </CardHeader>
               <CardContent className="space-y-4 pt-4">
-                <div>
-                  <Label htmlFor="current-password">Current Password</Label>
-                  <Input 
-                    id="current-password" 
-                    type="password" 
-                    placeholder="••••••••"
-                  />
-                </div>
-                
-                <div>
-                  <Label htmlFor="new-password">New Password</Label>
-                  <Input 
-                    id="new-password" 
-                    type="password" 
-                    placeholder="••••••••"
-                  />
-                </div>
-                
-                <div>
-                  <Label htmlFor="confirm-password">Confirm New Password</Label>
-                  <Input 
-                    id="confirm-password" 
-                    type="password" 
-                    placeholder="••••••••"
-                  />
-                </div>
-                
-                <Button variant="outline" className="w-full">
-                  Update Password
+                <Button 
+                  variant="outline" 
+                  className="w-full"
+                  onClick={() => toast.info("Password change coming soon!")}
+                >
+                  Change Password
                 </Button>
               </CardContent>
             </Card>
