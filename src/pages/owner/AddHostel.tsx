@@ -1,4 +1,3 @@
-
 import React, { useState, useRef } from "react";
 import { useNavigate } from "react-router-dom";
 import { Card, CardHeader, CardContent } from "@/components/ui/card";
@@ -13,7 +12,7 @@ import { GoogleMap, LoadScript, Marker, Autocomplete } from '@react-google-maps/
 import { supabase } from "@/integrations/supabase/client";
 
 interface FormData {
-  hostelType: string;
+  hostelType: "boys" | "girls" | "coed";
   hostelName: string;
   address: string;
   city: string;
@@ -29,7 +28,7 @@ const AddHostel = () => {
   const navigate = useNavigate();
   const form = useForm<FormData>({
     defaultValues: {
-      hostelType: "",
+      hostelType: "boys",
       hostelName: "",
       address: "",
       city: "",
@@ -85,27 +84,24 @@ const AddHostel = () => {
       }
     }
 
-    const { error } = await supabase.from("hostels").insert([
-      {
-        name: data.hostelName,
-        type: data.hostelType,
-        description: data.agentNotes || "",
-        address: {
-          address: data.address,
-          city: data.city,
-          state: data.state
-        },
-        lat: data.lat,
-        lng: data.lng,
-        status: "draft",
-        images: uploadedImageUrls,
-        video_url: data.videoUrls?.[0] || null,
-        updated_at: new Date().toISOString(),
-        created_by: "owner",
-        owner_id: userId,
-
-      }
-    ]);
+    const { error } = await supabase.from("hostels").insert({
+      name: data.hostelName,
+      type: data.hostelType,
+      description: data.agentNotes || "",
+      address: {
+        address: data.address,
+        city: data.city,
+        state: data.state
+      },
+      lat: data.lat,
+      lng: data.lng,
+      status: "draft" as const,
+      images: uploadedImageUrls,
+      video_url: data.videoUrls?.[0] || null,
+      updated_at: new Date().toISOString(),
+      created_by: "owner" as const,
+      owner_id: userId,
+    });
 
     if (error) {
       console.error(error);
@@ -150,7 +146,6 @@ const AddHostel = () => {
                       className="w-full p-2 border rounded"
                       {...form.register("hostelType", { required: true })}
                     >
-                      <option value="">Select Hostel Type</option>
                       <option value="boys">Boys</option>
                       <option value="girls">Girls</option>
                       <option value="coed">Co-ed</option>
