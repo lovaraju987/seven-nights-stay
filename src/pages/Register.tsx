@@ -46,6 +46,7 @@ const Register = () => {
     if (userId) {
       await supabase.from("profiles").upsert({
         id: userId,
+        email: email, // Include email in the profile upsert
         name: fullName,
         role,
       });
