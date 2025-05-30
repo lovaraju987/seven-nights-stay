@@ -1,41 +1,106 @@
 
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardFooter } from "@/components/ui/card";
 import { Avatar } from "@/components/ui/avatar";
 import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { MapPin, Calendar, Phone, LogOut, User, Settings, HelpCircle, Shield, Bell, CreditCard, Camera } from "lucide-react";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@radix-ui/react-tabs";
+import { MapPin, Calendar, Phone, LogOut, User, Settings, HelpCircle, Shield, Bell, CreditCard, Camera, Loader2 } from "lucide-react";
 import { Switch } from "@/components/ui/switch";
 import { useNavigate } from "react-router-dom";
 import { toast } from "@/components/ui/sonner";
+import { supabase } from "@/lib/supabase";
+import { Profile as ProfileType } from "@/types/supabase"; // Assuming you have a type definition for Profile
 
 const Profile = () => {
   const navigate = useNavigate();
   
-  // Mock data
-  const [profile, setProfile] = useState({
-    name: "Raj Kumar",
-    email: "raj.kumar@example.com",
-    phone: "+91 9876543210",
-    address: "42 Park Avenue, Indira Nagar, Bangalore",
-    bio: "Explorer and digital nomad. Love staying in hostels and meeting new people!",
-    profileImage: "",
-    verifiedEmail: true,
-    verifiedPhone: true,
-    verifiedId: true
+  // Initialize profile state with default values to ensure controlled inputs
+  const [profile, setProfile] = useState<Partial<ProfileType>>({
+    id: undefined, // Will be set after fetching user
+    name: '',
+    email: '', // Email might not be directly editable, but keep for display
+    phone: '',
+    address: '',
+    bio: '',
+    profileImage: '', // URL or path to profile image
+    role: 'hosteller', // Default role
+    verifiedEmail: false, // Assuming these start as false
+    verifiedPhone: false,
+    verifiedId: false
   });
   
-  const handleLogout = () => {
-    // In a real app, this would clear auth state
-    toast.success("Successfully logged out");
-    navigate("/role-selection");
+  const [loading, setLoading] = useState(true);
+  const [isSaving, setIsSaving] = useState(false);
+
+  useEffect(() => {
+    const fetchProfile = async () => {
+      setLoading(true);
+      const { data: user, error: userError } = await supabase.auth.getUser();
+      
+      if (userError || !user?.user) {
+        toast.error("Error fetching user: " + userError?.message);
+        setLoading(false);
+        // Optionally navigate to login if user is not found
+        // navigate("/login");
+        return;
+      }
+      
+      const userId = user.user.id;
+      
+      const { data: profileData, error: profileError } = await supabase
+        .from("profiles")
+        .select("*")
+        .eq("id", userId)
+        .single();
+      
+      if (profileError) {
+        toast.error("Error fetching profile: " + profileError.message);
+      } else if (profileData) {
+        setProfile(profileData); // Cast to your ProfileType
+      } else {
+         // Handle case where profile might not exist after signup
+         setProfile(prev => ({ ...prev, id: userId }));
+      }
+      
+      setLoading(false);
+    };
+    
+    fetchProfile();
+  }, []); // Fetch profile on component mount
+
+  const handleLogout = async () => {
+    const { error } = await supabase.auth.signOut();
+    
+    if (error) {
+      toast.error("Logout failed: " + error.message);
+    } else {
+      toast.success("Successfully logged out");
+      navigate("/role-selection");
+    }
   };
   
-  const handleSaveProfile = () => {
-    toast.success("Profile saved successfully");
+  const handleSaveProfile = async () => {
+    setIsSaving(true);
+    const { data, error } = await supabase
+      .from("profiles")
+      .update({ 
+        name: profile.name,
+        phone: profile.phone,
+        address: profile.address,
+        bio: profile.bio,
+        // email and profileImage updates would need separate handling
+      })
+      .eq("id", profile.id);
+    
+    if (error) {
+      toast.error("Failed to save profile: " + error.message);
+    } else {
+      toast.success("Profile saved successfully");
+    }
+    setIsSaving(false);
   };
 
   return (
@@ -48,6 +113,11 @@ const Profile = () => {
       </header>
       
       {/* Main Content */}
+      {loading && (
+        <div className="flex justify-center items-center h-64">
+          <Loader2 className="h-8 w-8 animate-spin text-blue-600" />
+        </div>
+      )}
       <main className="flex-1 p-4 max-w-md mx-auto w-full">
         <Tabs defaultValue="profile" className="w-full">
           <TabsList className="grid grid-cols-3 mb-4">
@@ -105,7 +175,7 @@ const Profile = () => {
                   <div>
                     <Label htmlFor="name">Full Name</Label>
                     <Input 
-                      id="name" 
+                      id="name"
                       value={profile.name} 
                       onChange={(e) => setProfile({...profile, name: e.target.value})} 
                     />
@@ -114,7 +184,7 @@ const Profile = () => {
                   <div>
                     <Label htmlFor="email">Email</Label>
                     <Input 
-                      id="email" 
+                      id="email"
                       value={profile.email} 
                       onChange={(e) => setProfile({...profile, email: e.target.value})} 
                     />
@@ -123,7 +193,7 @@ const Profile = () => {
                   <div>
                     <Label htmlFor="phone">Phone Number</Label>
                     <Input 
-                      id="phone" 
+                      id="phone"
                       value={profile.phone} 
                       onChange={(e) => setProfile({...profile, phone: e.target.value})} 
                     />
@@ -132,7 +202,7 @@ const Profile = () => {
                   <div>
                     <Label htmlFor="address">Address</Label>
                     <Input 
-                      id="address" 
+                      id="address"
                       value={profile.address} 
                       onChange={(e) => setProfile({...profile, address: e.target.value})} 
                     />
@@ -141,7 +211,7 @@ const Profile = () => {
                   <div>
                     <Label htmlFor="bio">About Me</Label>
                     <Textarea 
-                      id="bio" 
+                      id="bio"
                       value={profile.bio} 
                       onChange={(e) => setProfile({...profile, bio: e.target.value})} 
                       placeholder="Tell us a bit about yourself..."
@@ -153,7 +223,9 @@ const Profile = () => {
                   <Button 
                     className="w-full" 
                     onClick={handleSaveProfile}
+                    disabled={isSaving}
                   >
+                    {isSaving && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
                     Save Changes
                   </Button>
                 </div>
@@ -168,7 +240,7 @@ const Profile = () => {
                 <div>
                   <Label htmlFor="current-password">Current Password</Label>
                   <Input 
-                    id="current-password" 
+                    id="current-password"
                     type="password" 
                     placeholder="••••••••"
                   />
@@ -177,7 +249,7 @@ const Profile = () => {
                 <div>
                   <Label htmlFor="new-password">New Password</Label>
                   <Input 
-                    id="new-password" 
+                    id="new-password"
                     type="password" 
                     placeholder="••••••••"
                   />
@@ -186,7 +258,7 @@ const Profile = () => {
                 <div>
                   <Label htmlFor="confirm-password">Confirm New Password</Label>
                   <Input 
-                    id="confirm-password" 
+                    id="confirm-password"
                     type="password" 
                     placeholder="••••••••"
                   />

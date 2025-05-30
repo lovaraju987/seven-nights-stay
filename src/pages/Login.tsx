@@ -30,6 +30,26 @@ const Login = () => {
     if (error) {
       toast.error(error.message);
     } else {
+      // After successful login, check and update profile if email is missing
+      if (data.user) {
+        const { data: profileData, error: profileError } = await supabase
+          .from("profiles")
+          .select("email") // Only select email for efficiency
+          .eq("id", data.user.id)
+          .single();
+
+        if (profileError) {
+          console.error("Error fetching profile after login:", profileError);
+          // Optionally, show a non-blocking toast or handle this error silently
+        } else if (profileData && !profileData.email && data.user.email) {
+          // If profile exists but email is missing, update it
+          const { error: updateError } = await supabase
+            .from("profiles")
+            .update({ email: data.user.email })
+            .eq("id", data.user.id);
+          if (updateError) console.error("Error updating profile email after login:", updateError);
+        }
+      }
       toast.success("Login successful!");
       navigate("/hosteller/home");
     }
