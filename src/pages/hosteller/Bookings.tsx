@@ -12,7 +12,6 @@ const BookingsPage = () => {
   // Use Supabase user fetch
   const [user, setUser] = useState<any>(null);
   const [bookings, setBookings] = useState<any[]>([]);
-  const [loading, setLoading] = useState(false);
 
   useEffect(() => {
     // Get current user from Supabase
@@ -27,7 +26,6 @@ const BookingsPage = () => {
   useEffect(() => {
     if (!user) return;
     const fetchBookings = async () => {
-      setLoading(true);
       const { data, error } = await supabase
         .from('bookings')
         .select(`*, hostels(*), rooms(*)`)
@@ -37,7 +35,6 @@ const BookingsPage = () => {
       } else if (data) {
         setBookings(data as any);
       }
-      setLoading(false);
     };
     fetchBookings();
   }, [user]);
@@ -104,15 +101,16 @@ const BookingsPage = () => {
                     key={booking.id}
                     booking={{
                       id: booking.id,
+                      hostelId: booking.hostel_id, // Add hostelId
                       hostelName: booking.hostels.name,
                       roomType: booking.rooms.room_name,
-                      location: Array.isArray(booking.hostels.address) ? JSON.stringify(booking.hostels.address) : booking.hostels.address || '',
+                      location: Array.isArray(booking.hostels.address) ? JSON.stringify(booking.hostels.address) : booking.hostels.address ?? '',
                       checkIn: booking.start_date,
                       checkOut: booking.end_date,
                       paymentStatus: booking.payment_status,
                       amount: Number(booking.amount),
                       bookingId: booking.id,
-                      beds: booking.rooms.beds_total || 1,
+                      beds: booking.rooms.beds_total ?? 1,
                     }}
                     type="upcoming"
                     formatDate={formatDate}
@@ -135,15 +133,16 @@ const BookingsPage = () => {
                     key={booking.id}
                     booking={{
                       id: booking.id,
+                      hostelId: booking.hostel_id, // Add hostelId
                       hostelName: booking.hostels.name,
                       roomType: booking.rooms.room_name,
-                      location: Array.isArray(booking.hostels.address) ? JSON.stringify(booking.hostels.address) : booking.hostels.address || '',
+                      location: Array.isArray(booking.hostels.address) ? JSON.stringify(booking.hostels.address) : booking.hostels.address ?? '',
                       checkIn: booking.start_date,
                       checkOut: booking.end_date,
                       paymentStatus: booking.payment_status,
                       amount: Number(booking.amount),
                       bookingId: booking.id,
-                      beds: booking.rooms.beds_total || 1,
+                      beds: booking.rooms.beds_total ?? 1,
                     }}
                     type="past"
                     formatDate={formatDate}
@@ -165,15 +164,16 @@ const BookingsPage = () => {
                     key={booking.id}
                     booking={{
                       id: booking.id,
+                      hostelId: booking.hostel_id, // Add hostelId
                       hostelName: booking.hostels.name,
                       roomType: booking.rooms.room_name,
-                      location: Array.isArray(booking.hostels.address) ? JSON.stringify(booking.hostels.address) : booking.hostels.address || '',
+                      location: Array.isArray(booking.hostels.address) ? JSON.stringify(booking.hostels.address) : booking.hostels.address ?? '',
                       checkIn: booking.start_date,
                       checkOut: booking.end_date,
                       paymentStatus: booking.payment_status,
                       amount: Number(booking.amount),
                       bookingId: booking.id,
-                      beds: booking.rooms.beds_total || 1,
+                      beds: booking.rooms.beds_total ?? 1,
                       cancelReason: booking.status === 'cancelled' ? 'Cancelled by user' : undefined,
                     }}
                     type="cancelled"
