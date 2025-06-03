@@ -1,5 +1,4 @@
-
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardFooter } from "@/components/ui/card";
@@ -10,24 +9,20 @@ import { Switch } from "@/components/ui/switch";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Textarea } from "@/components/ui/textarea";
 import { toast } from "@/components/ui/sonner";
-
-// Mock data
-const mockRoom = {
-  id: "r1",
-  type: "Single Room",
-  hostelName: "Backpackers Haven",
-  hostelId: "1",
-  dailyPrice: 799,
-  weeklyPrice: 4999,
-  monthlyPrice: 14999,
-};
+import { supabase } from "@/lib/supabase";
 
 const Booking = () => {
   const { hostelId, roomId } = useParams<{ hostelId: string; roomId: string }>();
   const navigate = useNavigate();
+  // Use Supabase user fetch
+  const [user, setUser] = useState<any>(null);
+  const [profile, setProfile] = useState<any>(null);
   
-  // In a real app, fetch data based on hostelId and roomId
-  const room = mockRoom;
+  // Room and hostel data from Supabase
+  const [room, setRoom] = useState<any>(null);
+  const [hostel, setHostel] = useState<any>(null);
+  const [loading, setLoading] = useState(true);
+  const [creating, setCreating] = useState(false);
   
   const [stayType, setStayType] = useState<'daily' | 'weekly' | 'monthly'>('daily');
   const [startDate, setStartDate] = useState<string>(() => {
@@ -41,6 +36,60 @@ const Booking = () => {
   const [specialRequests, setSpecialRequests] = useState('');
   const [acceptedTerms, setAcceptedTerms] = useState(false);
   
+  // Fetch user data from Supabase
+  useEffect(() => {
+    const getUser = async () => {
+      const { data } = await supabase.auth.getUser();
+      setUser(data?.user || null);
+      // Optionally fetch profile if needed
+      if (data?.user) {
+        const { data: profileData } = await supabase
+          .from('profiles')
+          .select('*')
+          .eq('id', data.user.id)
+          .single();
+        setProfile(profileData || null);
+      }
+    };
+    getUser();
+  }, []);
+
+  // Fetch room and hostel data
+  useEffect(() => {
+    const fetchData = async () => {
+      if (!hostelId || !roomId) {
+        toast.error("Invalid booking parameters");
+        navigate(-1);
+        return;
+      }
+      setLoading(true);
+      const { data: roomData, error: roomError } = await supabase
+        .from('rooms')
+        .select('*')
+        .eq('id', roomId)
+        .single();
+      if (roomError || !roomData) {
+        toast.error("Room not found");
+        navigate(-1);
+        return;
+      }
+      setRoom(roomData);
+      const { data: hostelData, error: hostelError } = await supabase
+        .from('hostels')
+        .select('*')
+        .eq('id', hostelId)
+        .single();
+      if (hostelError || !hostelData) {
+        toast.error("Hostel not found");
+        navigate(-1);
+        return;
+      }
+      setHostel(hostelData);
+      setLoading(false);
+    };
+    fetchData();
+  }, [hostelId, roomId, navigate]);
+
   // Calculate end date based on stay type
   const getEndDate = () => {
     const date = new Date(startDate);
@@ -58,9 +107,10 @@ const Booking = () => {
   
   // Calculate price based on stay type
   const getPrice = () => {
-    if (stayType === 'daily') return room.dailyPrice;
-    if (stayType === 'weekly') return room.weeklyPrice;
-    return room.monthlyPrice;
+    if (!room) return 0;
+    if (stayType === 'daily') return room.pricing_daily || 0;
+    if (stayType === 'weekly') return room.pricing_weekly || 0;
+    return room.pricing_monthly || 0;
   };
   
   const handleDateChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -78,27 +128,72 @@ const Booking = () => {
     setStartDate(selectedDate);
   };
   
-  const handleContinue = () => {
-    // Validate form
+  const handleContinue = async () => {
+    if (!user) {
+      toast.error("You must be logged in to book");
+      return;
+    }
+    if (!room || !hostel) {
+      toast.error("Room or hostel not loaded");
+      return;
+    }
     if (bookingFor === 'other' && (!guestName || !guestPhone)) {
       toast.error("Please enter guest details");
       return;
     }
-    
     if (!acceptedTerms) {
       toast.error("Please accept the terms and conditions");
       return;
     }
-    
-    // In a real app, save booking details to state or context
-    // Then navigate to payment or confirmation based on payment method
+    setCreating(true);
+    // Prepare booking data
+    const bookingPayload: any = {
+      hosteller_id: user.id,
+      hostel_id: hostelId!,
+      room_id: roomId!,
+      plan: stayType,
+      start_date: startDate,
+      end_date: getEndDate(),
+      guest_name: bookingFor === 'other' ? guestName : profile?.name || '',
+      guest_id_url: null, // TODO: handle upload
+      amount: getPrice(),
+      payment_status: paymentMethod === 'online' ? 'paid' : 'cash',
+      status: 'confirmed',
+      created_at: new Date().toISOString(),
+    };
+    // Insert booking
+    const { data, error } = await supabase.from('bookings').insert([bookingPayload]).select().single();
+    if (error || !data) {
+      toast.error("Booking failed");
+      setCreating(false);
+      return;
+    }
+    // If online payment, create payment record
     if (paymentMethod === 'online') {
+      await supabase.from('payments').insert([
+        {
+          user_id: user.id,
+          hostel_id: hostelId!,
+          type: 'booking',
+          amount: getPrice(),
+          status: 'success',
+          timestamp: new Date().toISOString(),
+        },
+      ]);
       navigate(`/hosteller/payment/${hostelId}/${roomId}`);
     } else {
-      // For cash bookings, directly show confirmation
-      navigate(`/hosteller/booking-success/${hostelId}/${roomId}`);
+      navigate('/hosteller/bookings');
     }
+    setCreating(false);
   };
+  
+  if (loading) {
+    return (
+      <div className="flex items-center justify-center min-h-screen">
+        <div className="animate-spin rounded-full h-32 w-32 border-t-4 border-blue-500"></div>
+      </div>
+    );
+  }
   
   return (
     <div className="flex flex-col min-h-screen bg-gray-50">
@@ -120,8 +215,8 @@ const Booking = () => {
         {/* Hostel & Room Info */}
         <Card className="mb-4">
           <CardContent className="p-4">
-            <h2 className="font-medium mb-1">{room.hostelName}</h2>
-            <p className="text-gray-600 text-sm">{room.type}</p>
+            <h2 className="font-medium mb-1">{hostel.hostel_name}</h2>
+            <p className="text-gray-600 text-sm">{room.room_type}</p>
           </CardContent>
         </Card>
         

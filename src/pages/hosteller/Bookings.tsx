@@ -1,78 +1,69 @@
-
-import React from "react";
+import React, { useState, useEffect } from "react";
+import { useNavigate } from "react-router-dom";
+import { supabase } from "@/lib/supabase";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Badge } from "@/components/ui/badge";
-import { useNavigate } from "react-router-dom";
-import { MapPin, Phone, Calendar, AlertCircle } from "lucide-react";
+import { MapPin, Phone, Calendar as CalendarIcon, AlertCircle } from "lucide-react";
 
 const BookingsPage = () => {
   const navigate = useNavigate();
-  
-  // Mock data for bookings
-  const upcomingBookings = [
-    {
-      id: "b1",
-      hostelId: "1",
-      hostelName: "Backpackers Haven",
-      roomType: "Mixed Dormitory",
-      location: "Koramangala, Bangalore",
-      checkIn: "2025-05-18",
-      checkOut: "2025-05-25",
-      paymentStatus: "Paid",
-      amount: 4999,
-      bookingId: "BK-7836",
-      beds: 1
+  // Use Supabase user fetch
+  const [user, setUser] = useState<any>(null);
+  const [bookings, setBookings] = useState<any[]>([]);
+  const [loading, setLoading] = useState(false);
+
+  useEffect(() => {
+    // Get current user from Supabase
+    const getUser = async () => {
+      const { data } = await supabase.auth.getUser();
+      setUser(data?.user || null);
+    };
+    getUser();
+  }, []);
+
+  // Fetch bookings for current user
+  useEffect(() => {
+    if (!user) return;
+    const fetchBookings = async () => {
+      setLoading(true);
+      const { data, error } = await supabase
+        .from('bookings')
+        .select(`*, hostels(*), rooms(*)`)
+        .eq('hosteller_id', user.id);
+      if (error) {
+        console.error(error);
+      } else if (data) {
+        setBookings(data as any);
+      }
+      setLoading(false);
+    };
+    fetchBookings();
+  }, [user]);
+
+  const today = new Date();
+  const upcomingBookings = bookings.filter(b => b.status === 'confirmed' && new Date(b.start_date) >= today);
+  const pastBookings = bookings.filter(b => 
+    (b.status === 'completed') || (b.status === 'confirmed' && new Date(b.end_date) < today)
+  );
+  const cancelledBookings = bookings.filter(b => b.status === 'cancelled');
+
+  // Cancel booking
+  const handleCancel = async (id: string) => {
+    if (!window.confirm('Are you sure you want to cancel this booking?')) return;
+    const { error } = await supabase
+      .from('bookings')
+      .update({ status: 'cancelled' })
+      .eq('id', id);
+    if (error) {
+      console.error(error);
+      return;
     }
-  ];
-  
-  const pastBookings = [
-    {
-      id: "b2",
-      hostelId: "2",
-      hostelName: "Urban Nest Co-Living",
-      roomType: "Single Room",
-      location: "Whitefield, Bangalore",
-      checkIn: "2025-04-12",
-      checkOut: "2025-04-19",
-      paymentStatus: "Paid",
-      amount: 6793,
-      bookingId: "BK-6453",
-      beds: 1
-    },
-    {
-      id: "b3",
-      hostelId: "3",
-      hostelName: "Sunrise Girls PG",
-      roomType: "Double Room",
-      location: "Indiranagar, Bangalore",
-      checkIn: "2025-03-05",
-      checkOut: "2025-03-12",
-      paymentStatus: "Paid",
-      amount: 5432,
-      bookingId: "BK-5321",
-      beds: 1
-    }
-  ];
-  
-  const cancelledBookings = [
-    {
-      id: "b4",
-      hostelId: "4",
-      hostelName: "Mountain View Hostel",
-      roomType: "Private Room",
-      location: "HSR Layout, Bangalore",
-      checkIn: "2025-02-20",
-      checkOut: "2025-02-27",
-      paymentStatus: "Refunded",
-      amount: 5999,
-      bookingId: "BK-4219",
-      beds: 2,
-      cancelReason: "Travel plans changed"
-    }
-  ];
-  
+    // Refresh
+    setBookings(b => b.map(x => x.id === id ? { ...x, status: 'cancelled' } : x));
+  };
+
   // Function to format date
   const formatDate = (dateStr: string) => {
     const date = new Date(dateStr);
@@ -104,18 +95,30 @@ const BookingsPage = () => {
             <TabsTrigger value="past">Past</TabsTrigger>
             <TabsTrigger value="cancelled">Cancelled</TabsTrigger>
           </TabsList>
-          
+
           <TabsContent value="upcoming">
             {upcomingBookings.length > 0 ? (
               <div className="space-y-4">
                 {upcomingBookings.map(booking => (
-                  <BookingCard 
-                    key={booking.id} 
-                    booking={booking} 
+                  <BookingCard
+                    key={booking.id}
+                    booking={{
+                      id: booking.id,
+                      hostelName: booking.hostels.name,
+                      roomType: booking.rooms.room_name,
+                      location: Array.isArray(booking.hostels.address) ? JSON.stringify(booking.hostels.address) : booking.hostels.address || '',
+                      checkIn: booking.start_date,
+                      checkOut: booking.end_date,
+                      paymentStatus: booking.payment_status,
+                      amount: Number(booking.amount),
+                      bookingId: booking.id,
+                      beds: booking.rooms.beds_total || 1,
+                    }}
                     type="upcoming"
                     formatDate={formatDate}
                     calculateNights={calculateNights}
                     navigate={navigate}
+                    onCancel={handleCancel}
                   />
                 ))}
               </div>
@@ -123,14 +126,25 @@ const BookingsPage = () => {
               <EmptyState message="No upcoming bookings yet" />
             )}
           </TabsContent>
-          
+
           <TabsContent value="past">
             {pastBookings.length > 0 ? (
               <div className="space-y-4">
                 {pastBookings.map(booking => (
-                  <BookingCard 
-                    key={booking.id} 
-                    booking={booking} 
+                  <BookingCard
+                    key={booking.id}
+                    booking={{
+                      id: booking.id,
+                      hostelName: booking.hostels.name,
+                      roomType: booking.rooms.room_name,
+                      location: Array.isArray(booking.hostels.address) ? JSON.stringify(booking.hostels.address) : booking.hostels.address || '',
+                      checkIn: booking.start_date,
+                      checkOut: booking.end_date,
+                      paymentStatus: booking.payment_status,
+                      amount: Number(booking.amount),
+                      bookingId: booking.id,
+                      beds: booking.rooms.beds_total || 1,
+                    }}
                     type="past"
                     formatDate={formatDate}
                     calculateNights={calculateNights}
@@ -142,14 +156,26 @@ const BookingsPage = () => {
               <EmptyState message="No past bookings found" />
             )}
           </TabsContent>
-          
+
           <TabsContent value="cancelled">
             {cancelledBookings.length > 0 ? (
               <div className="space-y-4">
                 {cancelledBookings.map(booking => (
-                  <BookingCard 
-                    key={booking.id} 
-                    booking={booking} 
+                  <BookingCard
+                    key={booking.id}
+                    booking={{
+                      id: booking.id,
+                      hostelName: booking.hostels.name,
+                      roomType: booking.rooms.room_name,
+                      location: Array.isArray(booking.hostels.address) ? JSON.stringify(booking.hostels.address) : booking.hostels.address || '',
+                      checkIn: booking.start_date,
+                      checkOut: booking.end_date,
+                      paymentStatus: booking.payment_status,
+                      amount: Number(booking.amount),
+                      bookingId: booking.id,
+                      beds: booking.rooms.beds_total || 1,
+                      cancelReason: booking.status === 'cancelled' ? 'Cancelled by user' : undefined,
+                    }}
                     type="cancelled"
                     formatDate={formatDate}
                     calculateNights={calculateNights}
@@ -180,7 +206,7 @@ const BookingsPage = () => {
           className="flex flex-col items-center text-blue-600"
           onClick={() => navigate("/hosteller/bookings")}
         >
-          <Calendar className="h-5 w-5" />
+          <CalendarIcon className="h-5 w-5" />
           <span className="text-xs mt-1">Bookings</span>
         </Button>
         
@@ -219,9 +245,10 @@ type BookingCardProps = {
   formatDate: (date: string) => string;
   calculateNights: (checkIn: string, checkOut: string) => number;
   navigate: (path: string) => void;
+  onCancel?: (id: string) => void;
 };
 
-const BookingCard = ({ booking, type, formatDate, calculateNights, navigate }: BookingCardProps) => {
+const BookingCard = ({ booking, type, formatDate, calculateNights, navigate, onCancel }: BookingCardProps) => {
   const nights = calculateNights(booking.checkIn, booking.checkOut);
   
   return (
@@ -314,6 +341,7 @@ const BookingCard = ({ booking, type, formatDate, calculateNights, navigate }: B
                 <Button 
                   variant="destructive" 
                   size="sm"
+                  onClick={() => onCancel?.(booking.id)}
                 >
                   Cancel
                 </Button>
@@ -356,22 +384,5 @@ const EmptyState = ({ message }: { message: string }) => {
     </div>
   );
 };
-
-const CalendarIcon = (props: any) => (
-  <svg
-    {...props}
-    xmlns="http://www.w3.org/2000/svg"
-    fill="none"
-    viewBox="0 0 24 24"
-    stroke="currentColor"
-  >
-    <path
-      strokeLinecap="round"
-      strokeLinejoin="round"
-      strokeWidth={2}
-      d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"
-    />
-  </svg>
-);
 
 export default BookingsPage;
