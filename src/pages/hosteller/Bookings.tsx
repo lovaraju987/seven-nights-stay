@@ -331,15 +331,22 @@ const BookingCard = ({ booking, type, formatDate, calculateNights, navigate, onC
             
             {type === 'upcoming' && (
               <div className="space-x-2">
-                <Button 
-                  variant="outline" 
+                <Button
+                  variant="outline"
                   size="sm"
                   onClick={() => navigate(`/hosteller/booking-details/${booking.id}`)}
                 >
                   View Details
                 </Button>
-                <Button 
-                  variant="destructive" 
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => navigate(`/hosteller/move-in-checklist/${booking.id}`)}
+                >
+                  Checklist
+                </Button>
+                <Button
+                  variant="destructive"
                   size="sm"
                   onClick={() => onCancel?.(booking.id)}
                 >
