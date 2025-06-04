@@ -37,7 +37,7 @@ The project follows a clear and organized structure to separate concerns and enh
         *   `./src/components/ui`: Generic UI components from the chosen component library (e.g., buttons, inputs, dialogs).
     *   `./src/hooks`: Custom React hooks for encapsulating logic (e.g., `use-mobile.tsx`, `use-toast.ts`, `useAuth.tsx`).
     *   `./src/lib`: Utility functions and configurations.
-        *   `./src/lib/supabase.tsx`: Supabase client initialization and related functions.
+        *   `./src/lib/supabase.ts`: Supabase client initialization and related functions.
         *   `./src/lib/utils.ts`: General utility functions.
     *   `./src/pages`: Top-level components representing different pages of the application.
         *   `./src/pages/Index.tsx`: Landing or initial page.
@@ -103,7 +103,7 @@ The application offers a range of features tailored to each user role:
 *   **Routing:** React Router DOM is configured in `src/App.tsx` to handle navigation. Protected routes are likely implemented to ensure only authenticated users with appropriate roles can access specific pages.
 *   **Component Architecture:** The application utilizes a component-based architecture with a clear separation between UI components (in `src/components/ui`), reusable components, and page-specific components. Layout components (`AdminLayout.tsx`, `AgentLayout.tsx`, `OwnerLayout.tsx`) provide consistent structure for different sections of the app.
 *   **State Management:** Local component state is managed using React hooks (`useState`, `useReducer`). Global state, particularly for authentication and potentially shared data, might be managed through React Context or libraries like Zustand or Redux if needed (though not explicitly indicated by the file structure alone).
-*   **API Interactions:** Interactions with the Supabase backend are likely encapsulated in functions within `src/lib/supabase.tsx` or in dedicated data fetching hooks.
+*   **API Interactions:** Interactions with the Supabase backend are likely encapsulated in functions within `src/lib/supabase.ts` or in dedicated data fetching hooks.
 *   **Form Handling and Validation:** Forms are managed using React Hook Form, and input validation is handled using Zod schemas, providing a robust and type-safe approach to form management.
 *   **Styling:** Tailwind CSS is configured in `tailwind.config.ts` and used throughout the application for styling. The component library in `src/components/ui` likely provides pre-styled and accessible UI elements.
 *   **Utilities:** The `src/lib/utils.ts` file contains general utility functions that can be reused across the application. Custom hooks in `src/hooks` encapsulate specific logic for features like toast notifications (`use-toast.ts`) or mobile detection (`use-mobile.tsx`).
