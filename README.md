@@ -71,3 +71,8 @@ Yes, you can!
 To connect a domain, navigate to Project > Settings > Domains and click Connect Domain.
 
 Read more here: [Setting up a custom domain](https://docs.lovable.dev/tips-tricks/custom-domain#step-by-step-guide)
+
+## Reviews Table
+
+A SQL script for creating the `reviews` table is included under `supabase/create_reviews_table.sql`.
+Run it against your Supabase database to enable hostellers to rate their stays.

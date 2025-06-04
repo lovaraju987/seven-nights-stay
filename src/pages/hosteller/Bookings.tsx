@@ -12,6 +12,7 @@ const BookingsPage = () => {
   // Use Supabase user fetch
   const [user, setUser] = useState<any>(null);
   const [bookings, setBookings] = useState<any[]>([]);
+  const [reviews, setReviews] = useState<any[]>([]);
 
   useEffect(() => {
     // Get current user from Supabase
@@ -21,6 +22,18 @@ const BookingsPage = () => {
     };
     getUser();
   }, []);
+
+  useEffect(() => {
+    if (!user) return;
+    const fetchReviews = async () => {
+      const { data } = await supabase
+        .from('reviews')
+        .select('*')
+        .eq('user_id', user.id);
+      setReviews(data || []);
+    };
+    fetchReviews();
+  }, [user]);
 
   // Fetch bookings for current user
   useEffect(() => {
@@ -45,6 +58,9 @@ const BookingsPage = () => {
     (b.status === 'completed') || (b.status === 'confirmed' && new Date(b.end_date) < today)
   );
   const cancelledBookings = bookings.filter(b => b.status === 'cancelled');
+
+  const hasReviewed = (hostelId: string) =>
+    reviews.some(r => r.hostel_id === hostelId);
 
   // Cancel booking
   const handleCancel = async (id: string) => {
@@ -148,6 +164,7 @@ const BookingsPage = () => {
                     formatDate={formatDate}
                     calculateNights={calculateNights}
                     navigate={navigate}
+                    canRate={!hasReviewed(booking.hostel_id)}
                   />
                 ))}
               </div>
@@ -246,9 +263,10 @@ type BookingCardProps = {
   calculateNights: (checkIn: string, checkOut: string) => number;
   navigate: (path: string) => void;
   onCancel?: (id: string) => void;
+  canRate?: boolean;
 };
 
-const BookingCard = ({ booking, type, formatDate, calculateNights, navigate, onCancel }: BookingCardProps) => {
+const BookingCard = ({ booking, type, formatDate, calculateNights, navigate, onCancel, canRate }: BookingCardProps) => {
   const nights = calculateNights(booking.checkIn, booking.checkOut);
   
   return (
@@ -349,13 +367,24 @@ const BookingCard = ({ booking, type, formatDate, calculateNights, navigate, onC
             )}
             
             {type === 'past' && (
-              <Button 
-                variant="outline" 
-                size="sm"
-                onClick={() => navigate(`/hosteller/booking-details/${booking.id}`)}
-              >
-                View Details
-              </Button>
+              <div className="space-x-2">
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => navigate(`/hosteller/booking-details/${booking.id}`)}
+                >
+                  View Details
+                </Button>
+                {canRate && (
+                  <Button
+                    variant="secondary"
+                    size="sm"
+                    onClick={() => navigate(`/hosteller/rate/${booking.id}`)}
+                  >
+                    Rate Stay
+                  </Button>
+                )}
+              </div>
             )}
             
             {type === 'cancelled' && (

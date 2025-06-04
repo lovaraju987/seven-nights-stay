@@ -21,6 +21,8 @@ const HostelDetail = () => {
   const [loading, setLoading] = useState(true);
   const [currentImageIndex, setCurrentImageIndex] = useState(0);
   const [isFavorite, setIsFavorite] = useState(false);
+  const [avgRating, setAvgRating] = useState<number | null>(null);
+  const [reviewCount, setReviewCount] = useState(0);
 
   useEffect(() => {
     const fetchData = async () => {
@@ -49,6 +51,22 @@ const HostelDetail = () => {
       setLoading(false);
     };
     fetchData();
+  }, [hostelId]);
+
+  useEffect(() => {
+    if (!hostelId) return;
+    const fetchReviews = async () => {
+      const { data } = await supabase
+        .from('reviews')
+        .select('rating')
+        .eq('hostel_id', hostelId);
+      if (data) {
+        const avg = data.reduce((s: number, r: any) => s + r.rating, 0) / (data.length || 1);
+        setAvgRating(Number(avg.toFixed(1)));
+        setReviewCount(data.length);
+      }
+    };
+    fetchReviews();
   }, [hostelId]);
 
   useEffect(() => {
@@ -134,8 +152,8 @@ const HostelDetail = () => {
   const address = hostel.address?.address || hostel.address || "";
   const location = hostel.address?.city ? `${hostel.address.city}, ${hostel.address.state}` : "";
   const gender = hostel.type || "co-ed";
-  const rating = hostel.rating || 4.5;
-  const reviews = hostel.reviews || 0;
+  const rating = avgRating ?? hostel.rating ?? 0;
+  const reviews = reviewCount || hostel.reviews || 0;
   const description = hostel.description || "";
   const landmarks = hostel.landmarks || [];
 
