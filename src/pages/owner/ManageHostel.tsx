@@ -1,5 +1,5 @@
 
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { 
   Card, 
@@ -40,55 +40,59 @@ import {
   SheetContent,
   SheetTrigger,
 } from "@/components/ui/sheet";
+import { supabase } from "@/lib/supabase";
 
-// Mock data for a sample hostel
-const mockHostel = {
-  id: "1",
-  name: "Royal Boys Hostel",
-  description: "A comfortable and affordable hostel for male students, located close to major universities and educational institutions.",
-  address: "123 College Road, Bangalore, Karnataka, 560001",
-  phone: "+91 9876543210",
-  email: "info@royalboyshoste.com",
-  propertyType: "Student Hostel",
-  rooms: 45,
-  bathrooms: 20,
-  singleOccupancy: 15,
-  doubleOccupancy: 20,
-  tripleOccupancy: 10,
-  price: {
-    single: 8000,
-    double: 6000,
-    triple: 4500
-  },
-  amenities: [
-    "WiFi", "TV Room", "Mess", "Laundry", "Power Backup", 
-    "Hot Water", "Security", "CCTV", "Study Room"
-  ],
-  photos: [
-    "/placeholder.svg",
-    "/placeholder.svg",
-    "/placeholder.svg",
-    "/placeholder.svg"
-  ]
-};
 
 const ManageHostel = () => {
   const { hostelId } = useParams();
   const navigate = useNavigate();
   const [isEditing, setIsEditing] = useState(false);
-  const [hostel, setHostel] = useState(mockHostel);
+  const [hostel, setHostel] = useState<Record<string, unknown> | null>(null);
   const [isLoading, setIsLoading] = useState(false);
   const [activeTab, setActiveTab] = useState("details");
-  
+
   // Form state
   const [formData, setFormData] = useState({
-    name: hostel.name,
-    description: hostel.description,
-    address: hostel.address,
-    phone: hostel.phone,
-    email: hostel.email,
-    propertyType: hostel.propertyType
+    name: "",
+    description: "",
+    address: "",
+    phone: "",
+    email: "",
+    propertyType: ""
   });
+
+  // Fetch hostel details
+  useEffect(() => {
+    const fetchHostel = async () => {
+      if (!hostelId) return;
+      setIsLoading(true);
+      const { data, error } = await supabase
+        .from("hostels")
+        .select("*")
+        .eq("id", hostelId)
+        .single();
+      if (error || !data) {
+        console.error("Failed to fetch hostel", error);
+        toast({
+          title: "Error",
+          description: "Could not load hostel details",
+          variant: "destructive",
+        });
+      } else {
+        setHostel(data);
+        setFormData({
+          name: data.name || "",
+          description: data.description || "",
+          address: (data.address?.address ?? data.address) || "",
+          phone: data.phone || "",
+          email: data.email || "",
+          propertyType: data.propertyType || data.type || "",
+        });
+      }
+      setIsLoading(false);
+    };
+    fetchHostel();
+  }, [hostelId]);
 
   // Handle input change
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
@@ -100,41 +104,73 @@ const ManageHostel = () => {
   };
 
   // Handle form submission
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (!hostelId) return;
     setIsLoading(true);
-    
-    // Simulate API call
-    setTimeout(() => {
-      setHostel({
-        ...hostel,
-        ...formData
+
+    const { error } = await supabase
+      .from("hostels")
+      .update({
+        name: formData.name,
+        description: formData.description,
+        address: formData.address,
+        phone: formData.phone,
+        email: formData.email,
+        type: formData.propertyType,
+      })
+      .eq("id", hostelId);
+
+    if (error) {
+      console.error("Failed to update hostel", error);
+      toast({
+        title: "Error",
+        description: "Failed to update hostel details",
+        variant: "destructive",
       });
+    } else {
+      if (hostel) {
+        setHostel({ ...hostel, ...formData });
+      }
       setIsEditing(false);
-      setIsLoading(false);
       toast({
         title: "Hostel updated",
         description: "Your hostel details have been updated successfully.",
       });
-    }, 1500);
+    }
+    setIsLoading(false);
   };
   
   // Handle deletion confirmation
-  const handleDelete = () => {
+  const handleDelete = async () => {
+    if (!hostelId) return;
     if (window.confirm("Are you sure you want to delete this hostel? This action cannot be undone.")) {
       setIsLoading(true);
-      
-      // Simulate API call
-      setTimeout(() => {
+      const { error } = await supabase.from("hostels").delete().eq("id", hostelId);
+      if (error) {
+        console.error("Failed to delete hostel", error);
+        toast({
+          title: "Error",
+          description: "Failed to delete hostel",
+          variant: "destructive",
+        });
+      } else {
         navigate("/owner/dashboard");
         toast({
           title: "Hostel deleted",
           description: "Your hostel has been removed from our platform.",
-          variant: "destructive"
+          variant: "destructive",
         });
-      }, 1500);
+      }
+      setIsLoading(false);
     }
   };
+
+  if (!hostel) {
+    return (
+      <div className="flex items-center justify-center p-6">Loading...</div>
+    );
+  }
 
   return (
     <div className="container mx-auto px-4 py-6 max-w-5xl">
