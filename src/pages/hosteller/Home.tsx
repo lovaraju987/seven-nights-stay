@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from "react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -71,22 +70,31 @@ const Home = () => {
       return roomDaily < minDaily ? room : min;
     });
 
-    const dailyPrice = cheapestRoom?.pricing_daily || hostel.pricing_daily || 599;
+    // Use room pricing or fallback values
+    const dailyPrice = cheapestRoom?.pricing_daily || 599;
     
-    // Calculate total available beds
-    const totalAvailableBeds = hostel.rooms?.reduce((total, room) => total + (room.beds_available || 0), 0) || hostel.available_beds || 0;
+    // Calculate total available beds from rooms or use fallback
+    const totalAvailableBeds = hostel.rooms?.reduce((total, room) => total + (room.beds_available || 0), 0) || 5;
 
-    // Parse amenities or use default
+    // Parse amenities from JSON or use default
     let amenities = { wifi: false, ac: false, food: false, laundry: false, cleaning: false };
-    if (hostel.amenities && typeof hostel.amenities === 'object') {
-      amenities = { ...amenities, ...hostel.amenities };
+    try {
+      if (typeof hostel.address === 'object' && hostel.address && 'amenities' in hostel.address) {
+        amenities = { ...amenities, ...(hostel.address as any).amenities };
+      }
+    } catch (e) {
+      console.log('Could not parse amenities for hostel:', hostel.id);
     }
 
     // Get address string
     let locationString = "Location not specified";
     if (hostel.address && typeof hostel.address === 'object') {
       const addr = hostel.address as any;
-      locationString = addr.city ? `${addr.city}` : locationString;
+      if (addr.city) {
+        locationString = addr.area ? `${addr.area}, ${addr.city}` : addr.city;
+      } else if (addr.area) {
+        locationString = addr.area;
+      }
     }
 
     // Use first image or default
@@ -94,17 +102,23 @@ const Home = () => {
       ? hostel.images[0] 
       : "https://images.unsplash.com/photo-1555854877-bab0e564b8d5?crop=entropy&cs=tinysrgb&fit=crop&fm=jpg&h=250&ixid=MnwxfDB8MXxyYW5kb218MHx8aG9zdGVsfHx8fHx8MTY4NDc0NjQ5OQ&ixlib=rb-4.0.3&q=80&w=400";
 
+    // Determine gender from type field
+    let gender = 'co-ed';
+    if (hostel.type === 'boys') gender = 'boys';
+    else if (hostel.type === 'girls') gender = 'girls';
+    else if (hostel.type === 'coed') gender = 'co-ed';
+
     return {
       id: hostel.id,
       name: hostel.name,
-      gender: hostel.gender || 'co-ed',
+      gender: gender,
       location: locationString,
-      rating: hostel.rating || 4.5,
+      rating: 4.5, // Default rating since it's not in the current schema
       price: dailyPrice,
       availableBeds: totalAvailableBeds,
       image: image,
       amenities: amenities,
-      mapUrl: hostel.map_url || `https://www.google.com/maps?q=${encodeURIComponent(locationString)}`
+      mapUrl: `https://www.google.com/maps?q=${encodeURIComponent(locationString)}`
     };
   });
 
