@@ -60,6 +60,14 @@ This project is built with:
 - shadcn-ui
 - Tailwind CSS
 
+## Running tests
+
+Vitest is used for unit testing. Run all tests with:
+
+```sh
+npm test
+```
+
 ## How can I deploy this project?
 
 Simply open [Lovable](https://lovable.dev/projects/12dbad30-ea60-4bdc-8420-df4df3bf2cdb) and click on Share -> Publish.
