@@ -92,7 +92,7 @@ const Register = () => {
             <option value="hosteller">Hosteller</option>
             <option value="owner">Owner</option>
             <option value="agent">Agent</option>
-            <option value="admin">Admin</option> {/* ✅ Add this line */}
+            <option value="admin">Admin</option>
 
           </select>
         </CardContent>
