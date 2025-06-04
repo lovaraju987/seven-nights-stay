@@ -57,6 +57,9 @@ const BookingsPage = () => {
       console.error(error);
       return;
     }
+    await supabase.functions.invoke('send-booking-notification', {
+      body: { booking_id: id },
+    });
     // Refresh
     setBookings(b => b.map(x => x.id === id ? { ...x, status: 'cancelled' } : x));
   };

@@ -8,6 +8,7 @@ import { InputOTP, InputOTPGroup, InputOTPSlot } from "@/components/ui/input-otp
 import { toast } from "@/components/ui/sonner";
 import { Shield } from "lucide-react";
 import { supabase } from "@/lib/supabase";
+import { registerPush } from "@/lib/push";
 
 const AdminLogin = () => {
   const navigate = useNavigate();
@@ -46,6 +47,7 @@ const AdminLogin = () => {
     }
 
     toast.success("Admin login successful");
+    registerPush(data.user.id);
     navigate("/admin/dashboard");
     setIsLoading(false);
   };

@@ -168,6 +168,9 @@ const Booking = () => {
       setCreating(false);
       return;
     }
+    await supabase.functions.invoke('send-booking-notification', {
+      body: { booking_id: data.id },
+    });
     // If online payment, create payment record
     if (paymentMethod === 'online') {
       await supabase.from('payments').insert([

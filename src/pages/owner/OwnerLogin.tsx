@@ -6,6 +6,7 @@ import { Button } from "@/components/ui/button";
 import { InputOTP, InputOTPGroup, InputOTPSlot } from "@/components/ui/input-otp";
 import { toast } from "@/components/ui/sonner";
 import { supabase } from "@/lib/supabase";
+import { registerPush } from "@/lib/push";
 
 const OwnerLogin = () => {
   const navigate = useNavigate();
@@ -31,6 +32,7 @@ const OwnerLogin = () => {
       toast.error(error.message);
     } else {
       toast.success("Login successful!");
+      registerPush(data.user.id);
       navigate("/owner/dashboard");
     }
     setIsLoading(false);

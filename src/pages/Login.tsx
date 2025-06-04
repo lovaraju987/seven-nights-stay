@@ -6,6 +6,7 @@ import { Button } from "@/components/ui/button";
 import { InputOTP, InputOTPGroup, InputOTPSlot } from "@/components/ui/input-otp";
 import { toast } from "@/components/ui/sonner";
 import { supabase } from "@/lib/supabase";
+import { registerPush } from "@/lib/push";
 
 const Login = () => {
   const navigate = useNavigate();
@@ -47,12 +48,13 @@ const Login = () => {
             .from("profiles")
             .update({ email: data.user.email })
             .eq("id", data.user.id);
-          if (updateError) console.error("Error updating profile email after login:", updateError);
-        }
+        if (updateError) console.error("Error updating profile email after login:", updateError);
       }
-      toast.success("Login successful!");
-      navigate("/hosteller/home");
     }
+    toast.success("Login successful!");
+    registerPush(data.user.id);
+    navigate("/hosteller/home");
+  }
     setIsLoading(false);
   };
 

@@ -26,11 +26,12 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
-import { 
-  ArrowLeftIcon, 
-  SearchIcon 
+import {
+  ArrowLeftIcon,
+  SearchIcon
 } from "lucide-react";
 import { toast } from "@/hooks/use-toast";
+import { supabase } from "@/lib/supabase";
 
 // Mock booking data
 const bookingsData = [
@@ -120,12 +121,14 @@ const BookingList = () => {
   });
 
   // Handle booking cancellation
-  const handleCancelBooking = (bookingId: string) => {
+  const handleCancelBooking = async (bookingId: string) => {
     if (window.confirm("Are you sure you want to cancel this booking?")) {
-      // In a real application, you would make an API call here
       toast({
         title: "Booking Cancelled",
         description: `Booking ${bookingId} has been cancelled.`,
+      });
+      await supabase.functions.invoke('send-booking-notification', {
+        body: { booking_id: bookingId },
       });
     }
   };

@@ -8,6 +8,7 @@ import { InputOTP, InputOTPGroup, InputOTPSlot } from "@/components/ui/input-otp
 import { toast } from "@/components/ui/sonner";
 import { ArrowLeftIcon } from "lucide-react";
 import { supabase } from "@/lib/supabase";
+import { registerPush } from "@/lib/push";
 
 const AgentLogin = () => {
   const navigate = useNavigate();
@@ -32,6 +33,7 @@ const AgentLogin = () => {
       toast.error(error.message);
     } else {
       toast.success("Login successful!");
+      registerPush((await supabase.auth.getUser()).data.user!.id);
       navigate("/agent/dashboard");
     }
     setIsLoading(false);
@@ -87,9 +89,11 @@ const AgentLogin = () => {
       return;
     }
     setIsLoading(true);
-    setTimeout(() => {
+    setTimeout(async () => {
       setIsLoading(false);
       toast.success("Login successful!");
+      const uid = (await supabase.auth.getUser()).data.user!.id;
+      registerPush(uid);
       navigate("/agent/dashboard");
     }, 1000);
   };
