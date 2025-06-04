@@ -20,6 +20,7 @@ import { Button } from "@/components/ui/button";
 import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { toast } from "@/components/ui/sonner";
+import { supabase } from "@/lib/supabase";
 
 interface AdminLayoutProps {
   children: React.ReactNode;
@@ -78,7 +79,8 @@ const AdminLayout: React.FC<AdminLayoutProps> = ({ children }) => {
     },
   ];
 
-  const handleLogout = () => {
+  const handleLogout = async () => {
+    await supabase.auth.signOut();
     toast.success("Logged out successfully");
     navigate("/admin/login");
   };
