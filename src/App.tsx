@@ -3,6 +3,7 @@ import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route } from "react-router-dom";
+import { ProtectedRoute } from "@/components/ProtectedRoute";
 import Index from "./pages/Index";
 import NotFound from "./pages/NotFound";
 import SplashScreen from "./pages/SplashScreen";
@@ -68,50 +69,295 @@ const App = () => (
           <Route path="/login" element={<Login />} />
           
           {/* Hosteller Routes */}
-          <Route path="/hosteller/home" element={<Home />} />
-          <Route path="/hosteller/hostel/:hostelId" element={<HostelDetail />} />
-          <Route path="/hosteller/booking/:hostelId/:roomId" element={<Booking />} />
-          <Route path="/hosteller/bookings" element={<Bookings />} />
-          <Route path="/hosteller/wishlist" element={<Wishlist />} />
-          <Route path="/hosteller/profile" element={<Profile />} />
-          <Route path="/hosteller/filters" element={<Filters />} />
+          <Route
+            path="/hosteller/home"
+            element={
+              <ProtectedRoute role="hosteller">
+                <Home />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/hosteller/hostel/:hostelId"
+            element={
+              <ProtectedRoute role="hosteller">
+                <HostelDetail />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/hosteller/booking/:hostelId/:roomId"
+            element={
+              <ProtectedRoute role="hosteller">
+                <Booking />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/hosteller/bookings"
+            element={
+              <ProtectedRoute role="hosteller">
+                <Bookings />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/hosteller/wishlist"
+            element={
+              <ProtectedRoute role="hosteller">
+                <Wishlist />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/hosteller/profile"
+            element={
+              <ProtectedRoute role="hosteller">
+                <Profile />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/hosteller/filters"
+            element={
+              <ProtectedRoute role="hosteller">
+                <Filters />
+              </ProtectedRoute>
+            }
+          />
           
           {/* Owner Routes */}
           <Route path="/owner/login" element={<OwnerLogin />} />
-          <Route path="/owner/dashboard" element={<OwnerDashboard />} />
-          <Route path="/owner/add-hostel" element={<AddHostel />} />
-          <Route path="/owner/manage-hostel/:hostelId" element={<ManageHostel />} />
-          <Route path="/owner/manage-rooms/:hostelId" element={<ManageRooms />} />
-          <Route path="/owner/bookings" element={<BookingList />} />
-          <Route path="/owner/subscription" element={<Subscription />} />
-          <Route path="/owner/qr-storefront/:hostelId" element={<QRStorefront />} />
-          <Route path="/owner/analytics" element={<Analytics />} />
-          <Route path="/owner/profile" element={<OwnerProfile />} />
+          <Route
+            path="/owner/dashboard"
+            element={
+              <ProtectedRoute role="owner">
+                <OwnerDashboard />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/owner/add-hostel"
+            element={
+              <ProtectedRoute role="owner">
+                <AddHostel />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/owner/manage-hostel/:hostelId"
+            element={
+              <ProtectedRoute role="owner">
+                <ManageHostel />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/owner/manage-rooms/:hostelId"
+            element={
+              <ProtectedRoute role="owner">
+                <ManageRooms />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/owner/bookings"
+            element={
+              <ProtectedRoute role="owner">
+                <BookingList />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/owner/subscription"
+            element={
+              <ProtectedRoute role="owner">
+                <Subscription />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/owner/qr-storefront/:hostelId"
+            element={
+              <ProtectedRoute role="owner">
+                <QRStorefront />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/owner/analytics"
+            element={
+              <ProtectedRoute role="owner">
+                <Analytics />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/owner/profile"
+            element={
+              <ProtectedRoute role="owner">
+                <OwnerProfile />
+              </ProtectedRoute>
+            }
+          />
           
           {/* Admin Routes */}
           <Route path="/admin/login" element={<AdminLogin />} />
-          <Route path="/admin/dashboard" element={<AdminDashboard />} />
-          <Route path="/admin/hostels" element={<HostelManagement />} />
-          <Route path="/admin/users" element={<UserManagement />} />
-          <Route path="/admin/complaints" element={<ComplaintManagement />} />
-          <Route path="/admin/subscriptions" element={<SubscriptionPlans />} />
-          <Route path="/admin/notifications" element={<Notifications />} />
-          <Route path="/admin/reports" element={<Reports />} />
-          <Route path="/admin/logs" element={<Logs />} />
-          <Route path="/admin/settings" element={<Settings />} />
+          <Route
+            path="/admin/dashboard"
+            element={
+              <ProtectedRoute role="admin">
+                <AdminDashboard />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/admin/hostels"
+            element={
+              <ProtectedRoute role="admin">
+                <HostelManagement />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/admin/users"
+            element={
+              <ProtectedRoute role="admin">
+                <UserManagement />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/admin/complaints"
+            element={
+              <ProtectedRoute role="admin">
+                <ComplaintManagement />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/admin/subscriptions"
+            element={
+              <ProtectedRoute role="admin">
+                <SubscriptionPlans />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/admin/notifications"
+            element={
+              <ProtectedRoute role="admin">
+                <Notifications />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/admin/reports"
+            element={
+              <ProtectedRoute role="admin">
+                <Reports />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/admin/logs"
+            element={
+              <ProtectedRoute role="admin">
+                <Logs />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/admin/settings"
+            element={
+              <ProtectedRoute role="admin">
+                <Settings />
+              </ProtectedRoute>
+            }
+          />
           
           {/* Agent Routes */}
           <Route path="/agent/login" element={<AgentLogin />} />
-          <Route path="/agent/dashboard" element={<AgentDashboard />} />
-          <Route path="/agent/add-hostel" element={<AgentAddHostel />} />
-          <Route path="/agent/my-hostels" element={<AgentMyHostels />} />
-          <Route path="/agent/tasks" element={<AgentTasks />} />
-          <Route path="/agent/performance" element={<AgentPerformance />} />
-          <Route path="/agent/profile" element={<AgentProfile />} />
-          <Route path="/agent/view-hostel/:id" element={<AgentViewHostel />} />
-          <Route path="/agent/edit-hostel/:id" element={<AgentEditHostel />} />
-          <Route path="/agent/hostel-images/:id" element={<AgentHostelImages />} />
-          <Route path="/agent/contact-hostel/:id" element={<AgentContactHostel />} />
+          <Route
+            path="/agent/dashboard"
+            element={
+              <ProtectedRoute role="agent">
+                <AgentDashboard />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/agent/add-hostel"
+            element={
+              <ProtectedRoute role="agent">
+                <AgentAddHostel />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/agent/my-hostels"
+            element={
+              <ProtectedRoute role="agent">
+                <AgentMyHostels />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/agent/tasks"
+            element={
+              <ProtectedRoute role="agent">
+                <AgentTasks />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/agent/performance"
+            element={
+              <ProtectedRoute role="agent">
+                <AgentPerformance />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/agent/profile"
+            element={
+              <ProtectedRoute role="agent">
+                <AgentProfile />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/agent/view-hostel/:id"
+            element={
+              <ProtectedRoute role="agent">
+                <AgentViewHostel />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/agent/edit-hostel/:id"
+            element={
+              <ProtectedRoute role="agent">
+                <AgentEditHostel />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/agent/hostel-images/:id"
+            element={
+              <ProtectedRoute role="agent">
+                <AgentHostelImages />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/agent/contact-hostel/:id"
+            element={
+              <ProtectedRoute role="agent">
+                <AgentContactHostel />
+              </ProtectedRoute>
+            }
+          />
           
           {/* Retain Default Routes */}
           <Route path="/index" element={<Index />} />
