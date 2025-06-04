@@ -137,6 +137,21 @@ const Booking = () => {
       toast.error("Room or hostel not loaded");
       return;
     }
+
+    // Check owner subscription status before allowing booking
+    if (hostel.owner_id) {
+      const { data: sub, error: subError } = await supabase
+        .from('subscriptions')
+        .select('*')
+        .eq('owner_id', hostel.owner_id)
+        .order('expires_on', { ascending: false })
+        .limit(1)
+        .maybeSingle();
+      if (!sub || subError || new Date(sub.expires_on) < new Date()) {
+        toast.error('Hostel is not accepting new bookings at the moment.');
+        return;
+      }
+    }
     if (bookingFor === 'other' && (!guestName || !guestPhone)) {
       toast.error("Please enter guest details");
       return;
