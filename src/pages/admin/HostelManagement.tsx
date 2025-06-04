@@ -327,8 +327,7 @@ const HostelManagement = () => {
                         <p className="font-medium">
                           {selectedHostel.verified_on
                             ? new Date(selectedHostel.verified_on).toLocaleDateString()
-                            : selectedHostel.status !== "pending" && selectedHostel.updated_at
-                        /* ... rest of the dialog ... */ }
+                            : selectedHostel.status !== "pending" && selectedHostel.updated_at}
                         </p>
                       </div>
                     </div>
@@ -336,7 +335,6 @@ const HostelManagement = () => {
                   {/* ...rest of dialog... */}
                 </div>
               </div>
-            </div>
             {dialogAction !== "view" && (
               <DialogFooter>
                 <Button
