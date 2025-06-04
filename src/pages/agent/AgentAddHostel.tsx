@@ -95,7 +95,7 @@ const AgentAddHostel = () => {
         lat: data.lat,
         lng: data.lng,
         agent_id: userId,
-        status: "draft",
+        status: "pending",
         images: uploadedImageUrls,
         video_url: data.videoUrls?.[0] || null,
         created_by: "agent",

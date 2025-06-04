@@ -79,12 +79,20 @@ const OwnerDashboard = () => {
                   <div>
                     <h2 className="text-xl font-bold">{hostel.name}</h2>
                     <span className="bg-green-100 text-green-800 text-xs px-2 py-1 rounded-full font-medium">
-                      {hostel.status || "draft"}
+                      {hostel.status || "pending"}
                     </span>
                   </div>
-                  <Button onClick={() => navigate(`/owner/manage-hostel/${hostel.id}`)}>
+                  <Button
+                    onClick={() => navigate(`/owner/manage-hostel/${hostel.id}`)}
+                    disabled={hostel.status !== "verified"}
+                  >
                     Manage
                   </Button>
+                  {hostel.status !== "verified" && (
+                    <p className="text-sm text-gray-500 mt-1">
+                      Awaiting verification
+                    </p>
+                  )}
                 </CardContent>
               </Card>
             ))}
