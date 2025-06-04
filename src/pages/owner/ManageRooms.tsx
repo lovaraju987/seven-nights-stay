@@ -1,5 +1,5 @@
 
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { 
   PlusIcon, 
@@ -32,51 +32,24 @@ import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
 import { toast } from "@/hooks/use-toast";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-
-// Mock data
-const mockRooms = [
-  {
-    id: "1",
-    name: "Deluxe Twin Room",
-    type: "Twin Sharing",
-    capacity: 2,
-    price: 1500,
-    availability: 8,
-    amenities: ["Air Conditioning", "Attached Bathroom", "Wi-Fi", "Study Table"],
-    images: ["https://placehold.co/600x400/png", "https://placehold.co/600x400/png"],
-  },
-  {
-    id: "2",
-    name: "Standard Single Room",
-    type: "Single",
-    capacity: 1,
-    price: 2000,
-    availability: 5,
-    amenities: ["Air Conditioning", "Attached Bathroom", "Wi-Fi"],
-    images: ["https://placehold.co/600x400/png"],
-  },
-  {
-    id: "3",
-    name: "Economy Quad Room",
-    type: "Quad Sharing",
-    capacity: 4,
-    price: 1000,
-    availability: 12,
-    amenities: ["Ceiling Fan", "Common Bathroom", "Wi-Fi"],
-    images: ["https://placehold.co/600x400/png"],
-  }
-];
+import {
+  fetchRooms,
+  createRoom,
+  updateRoom,
+  deleteRoomById,
+  Room,
+} from "@/lib/supabase";
 
 const ManageRooms = () => {
   const { hostelId } = useParams();
   const navigate = useNavigate();
-  const [rooms, setRooms] = useState(mockRooms);
+  const [rooms, setRooms] = useState<Room[]>([]);
   const [activeTab, setActiveTab] = useState("all");
   const [isAddRoomDialogOpen, setIsAddRoomDialogOpen] = useState(false);
-  const [editingRoom, setEditingRoom] = useState<null | typeof mockRooms[0]>(null);
+  const [editingRoom, setEditingRoom] = useState<null | Room>(null);
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
   const [roomToDelete, setRoomToDelete] = useState<null | string>(null);
-  
+
   // New room form state
   const [formData, setFormData] = useState({
     name: "",
@@ -86,6 +59,23 @@ const ManageRooms = () => {
     availability: 0,
     amenities: [""]
   });
+
+  useEffect(() => {
+    const load = async () => {
+      if (!hostelId) return;
+      const { data, error } = await fetchRooms(hostelId);
+      if (error) {
+        toast({
+          title: "Error",
+          description: "Failed to load rooms",
+          variant: "destructive",
+        });
+      } else {
+        setRooms(data || []);
+      }
+    };
+    load();
+  }, [hostelId]);
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const { name, value } = e.target;
@@ -101,43 +91,57 @@ const ManageRooms = () => {
     setFormData({ ...formData, amenities });
   };
 
-  const handleAddRoom = () => {
-    const newRoom = {
-      id: Math.random().toString(36).substring(7),
+  const handleAddRoom = async () => {
+    if (!hostelId) return;
+    const payload = {
       ...formData,
-      images: ["https://placehold.co/600x400/png"]
+      hostel_id: hostelId,
+      images: ["https://placehold.co/600x400/png"],
     };
-    
-    setRooms([...rooms, newRoom]);
+    const { data, error } = await createRoom(payload as Omit<Room, "id">);
+    if (error || !data) {
+      toast({
+        title: "Error",
+        description: "Failed to add room",
+        variant: "destructive",
+      });
+      return;
+    }
+    setRooms([...rooms, data]);
     setFormData({
       name: "",
       type: "",
       capacity: 1,
       price: 0,
       availability: 0,
-      amenities: [""]
+      amenities: [""],
     });
     setIsAddRoomDialogOpen(false);
-    
     toast({
       title: "Room added successfully!",
-      description: `${newRoom.name} has been added to your hostel.`,
+      description: `${data.name} has been added to your hostel.`,
     });
   };
 
-  const handleEditRoom = () => {
+  const handleEditRoom = async () => {
     if (!editingRoom) return;
-    
-    const updatedRooms = rooms.map(room => 
-      room.id === editingRoom.id ? editingRoom : room
+    const { data, error } = await updateRoom(editingRoom.id, editingRoom);
+    if (error || !data) {
+      toast({
+        title: "Error",
+        description: "Failed to update room",
+        variant: "destructive",
+      });
+      return;
+    }
+    const updatedRooms = rooms.map((room) =>
+      room.id === data.id ? data : room
     );
-    
     setRooms(updatedRooms);
     setEditingRoom(null);
-    
     toast({
       title: "Room updated successfully!",
-      description: `Changes to ${editingRoom.name} have been saved.`,
+      description: `Changes to ${data.name} have been saved.`,
     });
   };
 
@@ -159,16 +163,21 @@ const ManageRooms = () => {
     setEditingRoom({ ...editingRoom, amenities });
   };
 
-  const handleDeleteRoom = () => {
+  const handleDeleteRoom = async () => {
     if (!roomToDelete) return;
-    
-    const updatedRooms = rooms.filter(room => room.id !== roomToDelete);
-    const deletedRoom = rooms.find(room => room.id === roomToDelete);
-    
-    setRooms(updatedRooms);
+    const deletedRoom = rooms.find((room) => room.id === roomToDelete);
+    const { error } = await deleteRoomById(roomToDelete);
+    if (error) {
+      toast({
+        title: "Error",
+        description: "Failed to delete room",
+        variant: "destructive",
+      });
+      return;
+    }
+    setRooms(rooms.filter((room) => room.id !== roomToDelete));
     setRoomToDelete(null);
     setIsDeleteDialogOpen(false);
-    
     toast({
       title: "Room deleted",
       description: `${deletedRoom?.name} has been removed from your hostel.`,
