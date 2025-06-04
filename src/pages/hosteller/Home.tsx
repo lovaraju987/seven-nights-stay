@@ -5,7 +5,82 @@ import { Button } from "@/components/ui/button";
 import { Search, MapPin, Star, Filter, User, Calendar, Heart, Navigation, Wifi, Coffee, Wind, Shirt } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { toast } from "@/hooks/use-toast";
-import { useHostels } from "@/hooks/useHostels";
+
+// Mock data for hostels
+const mockHostels = [
+  {
+    id: "1",
+    name: "Backpackers Haven",
+    gender: "co-ed",
+    location: "Koramangala, Bangalore",
+    rating: 4.7,
+    price: 599,
+    availableBeds: 8,
+    image: "https://images.unsplash.com/photo-1555854877-bab0e564b8d5?crop=entropy&cs=tinysrgb&fit=crop&fm=jpg&h=250&ixid=MnwxfDB8MXxyYW5kb218MHx8aG9zdGVsfHx8fHx8MTY4NDc0NjQ5OQ&ixlib=rb-4.0.3&q=80&w=400",
+    amenities: {
+      wifi: true,
+      ac: true,
+      food: true,
+      laundry: false,
+      cleaning: true
+    },
+    mapUrl: "https://www.google.com/maps?q=Koramangala,Bangalore"
+  },
+  {
+    id: "2",
+    name: "Horizon Boys Hostel",
+    gender: "boys",
+    location: "HSR Layout, Bangalore",
+    rating: 4.3,
+    price: 649,
+    availableBeds: 5,
+    image: "https://images.unsplash.com/photo-1613977257363-707ba9348227?crop=entropy&cs=tinysrgb&fit=crop&fm=jpg&h=250&ixid=MnwxfDB8MXxyYW5kb218MHx8aG9zdGVsfHx8fHx8MTY4NDc0NjUwMA&ixlib=rb-4.0.3&q=80&w=400",
+    amenities: {
+      wifi: true,
+      ac: false,
+      food: true,
+      laundry: true,
+      cleaning: false
+    },
+    mapUrl: "https://www.google.com/maps?q=HSR+Layout,Bangalore"
+  },
+  {
+    id: "3",
+    name: "Sunrise Girls PG",
+    gender: "girls",
+    location: "Indiranagar, Bangalore",
+    rating: 4.8,
+    price: 679,
+    availableBeds: 3,
+    image: "https://images.unsplash.com/photo-1555854877-bab0e564b8d5?crop=entropy&cs=tinysrgb&fit=crop&fm=jpg&h=250&ixid=MnwxfDB8MXxyYW5kb218MHx8aG9zdGVsfHx8fHx8MTY4NDc0NjQ5OQ&ixlib=rb-4.0.3&q=80&w=400",
+    amenities: {
+      wifi: true,
+      ac: true,
+      food: true,
+      laundry: true,
+      cleaning: true
+    },
+    mapUrl: "https://www.google.com/maps?q=Indiranagar,Bangalore"
+  },
+  {
+    id: "4",
+    name: "Urban Nest Co-Living",
+    gender: "co-ed",
+    location: "Whitefield, Bangalore",
+    rating: 4.5,
+    price: 699,
+    availableBeds: 12,
+    image: "https://images.unsplash.com/photo-1613977257363-707ba9348227?crop=entropy&cs=tinysrgb&fit=crop&fm=jpg&h=250&ixid=MnwxfDB8MXxyYW5kb218MHx8aG9zdGVsfHx8fHx8MTY4NDc0NjUwMA&ixlib=rb-4.0.3&q=80&w=400",
+    amenities: {
+      wifi: true,
+      ac: false,
+      food: false,
+      laundry: true,
+      cleaning: true
+    },
+    mapUrl: "https://www.google.com/maps?q=Whitefield,Bangalore"
+  }
+];
 
 const Home = () => {
   const [searchQuery, setSearchQuery] = useState("");
@@ -18,7 +93,6 @@ const Home = () => {
   } | null>(null);
   
   const navigate = useNavigate();
-  const { hostels, loading, error } = useHostels();
 
   const filters = [
     { id: "all", label: "All" },
@@ -61,68 +135,7 @@ const Home = () => {
     setSelectedFilter(selectedFilter === filterId ? null : filterId);
   };
 
-  // Transform hostel data to match the expected format
-  const transformedHostels = hostels.map(hostel => {
-    // Get the cheapest room's daily price
-    const cheapestRoom = hostel.rooms?.reduce((min, room) => {
-      const roomDaily = room.pricing_daily || 0;
-      const minDaily = min.pricing_daily || 0;
-      return roomDaily < minDaily ? room : min;
-    });
-
-    // Use room pricing or fallback values
-    const dailyPrice = cheapestRoom?.pricing_daily || 599;
-    
-    // Calculate total available beds from rooms or use fallback
-    const totalAvailableBeds = hostel.rooms?.reduce((total, room) => total + (room.beds_available || 0), 0) || 5;
-
-    // Parse amenities from JSON or use default
-    let amenities = { wifi: false, ac: false, food: false, laundry: false, cleaning: false };
-    try {
-      if (typeof hostel.address === 'object' && hostel.address && 'amenities' in hostel.address) {
-        amenities = { ...amenities, ...(hostel.address as any).amenities };
-      }
-    } catch (e) {
-      console.log('Could not parse amenities for hostel:', hostel.id);
-    }
-
-    // Get address string
-    let locationString = "Location not specified";
-    if (hostel.address && typeof hostel.address === 'object') {
-      const addr = hostel.address as any;
-      if (addr.city) {
-        locationString = addr.area ? `${addr.area}, ${addr.city}` : addr.city;
-      } else if (addr.area) {
-        locationString = addr.area;
-      }
-    }
-
-    // Use first image or default
-    const image = hostel.images && hostel.images.length > 0 
-      ? hostel.images[0] 
-      : "https://images.unsplash.com/photo-1555854877-bab0e564b8d5?crop=entropy&cs=tinysrgb&fit=crop&fm=jpg&h=250&ixid=MnwxfDB8MXxyYW5kb218MHx8aG9zdGVsfHx8fHx8MTY4NDc0NjQ5OQ&ixlib=rb-4.0.3&q=80&w=400";
-
-    // Determine gender from type field
-    let gender = 'co-ed';
-    if (hostel.type === 'boys') gender = 'boys';
-    else if (hostel.type === 'girls') gender = 'girls';
-    else if (hostel.type === 'coed') gender = 'co-ed';
-
-    return {
-      id: hostel.id,
-      name: hostel.name,
-      gender: gender,
-      location: locationString,
-      rating: 4.5, // Default rating since it's not in the current schema
-      price: dailyPrice,
-      availableBeds: totalAvailableBeds,
-      image: image,
-      amenities: amenities,
-      mapUrl: `https://www.google.com/maps?q=${encodeURIComponent(locationString)}`
-    };
-  });
-
-  const filteredHostels = transformedHostels.filter(hostel => {
+  const filteredHostels = mockHostels.filter(hostel => {
     // Text search filter
     const matchesSearch = hostel.name.toLowerCase().includes(searchQuery.toLowerCase()) || 
                          hostel.location.toLowerCase().includes(searchQuery.toLowerCase());
@@ -227,42 +240,6 @@ const Home = () => {
   const calculateMonthlyPrice = (dailyPrice: number) => {
     return (dailyPrice * 30 * 0.8).toFixed(0); // 20% discount for monthly
   };
-
-  if (loading) {
-    return (
-      <div className="flex flex-col min-h-screen bg-gray-50">
-        <header className="bg-white shadow-sm p-4 sticky top-0 z-10">
-          <div className="max-w-md mx-auto">
-            <h1 className="text-xl font-bold text-blue-800 mb-3">OneTo7 <span className="text-blue-600">Hostels</span></h1>
-          </div>
-        </header>
-        <main className="flex-1 p-4 max-w-md mx-auto w-full flex items-center justify-center">
-          <div className="text-center">
-            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600 mx-auto mb-4"></div>
-            <p className="text-gray-500">Loading hostels...</p>
-          </div>
-        </main>
-      </div>
-    );
-  }
-
-  if (error) {
-    return (
-      <div className="flex flex-col min-h-screen bg-gray-50">
-        <header className="bg-white shadow-sm p-4 sticky top-0 z-10">
-          <div className="max-w-md mx-auto">
-            <h1 className="text-xl font-bold text-blue-800 mb-3">OneTo7 <span className="text-blue-600">Hostels</span></h1>
-          </div>
-        </header>
-        <main className="flex-1 p-4 max-w-md mx-auto w-full flex items-center justify-center">
-          <div className="text-center">
-            <p className="text-red-500 mb-4">Error loading hostels: {error}</p>
-            <Button onClick={() => window.location.reload()}>Try Again</Button>
-          </div>
-        </main>
-      </div>
-    );
-  }
 
   return (
     <div className="flex flex-col min-h-screen bg-gray-50">
