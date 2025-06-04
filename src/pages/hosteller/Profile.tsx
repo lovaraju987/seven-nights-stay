@@ -22,6 +22,8 @@ const Profile = () => {
     email: '', // Email might not be directly editable, but keep for display
     phone: '',
     address: '',
+    emergency_contact_name: '',
+    emergency_contact_phone: '',
     bio: '',
     profileImage: '', // URL or path to profile image
     role: 'hosteller', // Default role
@@ -84,10 +86,12 @@ const Profile = () => {
     setIsSaving(true);
     const { data, error } = await supabase
       .from("profiles")
-      .update({ 
+      .update({
         name: profile.name,
         phone: profile.phone,
         address: profile.address,
+        emergency_contact_name: profile.emergency_contact_name,
+        emergency_contact_phone: profile.emergency_contact_phone,
         bio: profile.bio,
         // email and profileImage updates would need separate handling
       })
@@ -199,10 +203,28 @@ const Profile = () => {
                   
                   <div>
                     <Label htmlFor="address">Address</Label>
-                    <Input 
+                    <Input
                       id="address"
-                      value={profile.address} 
-                      onChange={(e) => setProfile({...profile, address: e.target.value})} 
+                      value={profile.address}
+                      onChange={(e) => setProfile({...profile, address: e.target.value})}
+                    />
+                  </div>
+
+                  <div>
+                    <Label htmlFor="emergency-contact-name">Emergency Contact Name</Label>
+                    <Input
+                      id="emergency-contact-name"
+                      value={profile.emergency_contact_name}
+                      onChange={(e) => setProfile({...profile, emergency_contact_name: e.target.value})}
+                    />
+                  </div>
+
+                  <div>
+                    <Label htmlFor="emergency-contact-phone">Emergency Contact Phone</Label>
+                    <Input
+                      id="emergency-contact-phone"
+                      value={profile.emergency_contact_phone}
+                      onChange={(e) => setProfile({...profile, emergency_contact_phone: e.target.value})}
                     />
                   </div>
                   
@@ -388,13 +410,22 @@ const Profile = () => {
                   Frequently Asked Questions
                 </Button>
                 
-                <Button 
-                  variant="outline" 
+                <Button
+                  variant="outline"
                   className="w-full justify-start"
                   onClick={() => navigate("/hosteller/contact")}
                 >
                   <Phone className="h-4 w-4 mr-2" />
                   Contact Support
+                </Button>
+
+                <Button
+                  variant="destructive"
+                  className="w-full justify-start"
+                  onClick={() => navigate("/hosteller/sos")}
+                >
+                  <Bell className="h-4 w-4 mr-2" />
+                  Emergency SOS
                 </Button>
                 
                 <Button 

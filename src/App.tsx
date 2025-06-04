@@ -16,6 +16,7 @@ import Bookings from "./pages/hosteller/Bookings";
 import Profile from "./pages/hosteller/Profile";
 import Wishlist from "./pages/hosteller/Wishlist";
 import Filters from "./pages/hosteller/Filters";
+import SOS from "./pages/hosteller/SOS";
 
 // Owner Routes
 import OwnerLogin from "./pages/owner/OwnerLogin";
@@ -75,6 +76,7 @@ const App = () => (
           <Route path="/hosteller/wishlist" element={<Wishlist />} />
           <Route path="/hosteller/profile" element={<Profile />} />
           <Route path="/hosteller/filters" element={<Filters />} />
+          <Route path="/hosteller/sos" element={<SOS />} />
           
           {/* Owner Routes */}
           <Route path="/owner/login" element={<OwnerLogin />} />
