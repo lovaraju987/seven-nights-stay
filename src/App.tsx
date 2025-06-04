@@ -41,6 +41,7 @@ import Logs from "./pages/admin/Logs";
 import ComplaintManagement from "./pages/admin/ComplaintManagement";
 import SubscriptionPlans from "./pages/admin/SubscriptionPlans";
 import Notifications from "@/pages/admin/Notifications";
+import AdminProfile from "./pages/admin/AdminProfile";
 
 // Agent Routes
 import AgentLogin from "./pages/agent/AgentLogin";
@@ -272,6 +273,14 @@ const App = () => (
             element={
               <ProtectedRoute role="admin">
                 <Settings />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/admin/profile"
+            element={
+              <ProtectedRoute role="admin">
+                <AdminProfile />
               </ProtectedRoute>
             }
           />

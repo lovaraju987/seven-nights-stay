@@ -72,6 +72,11 @@ const AdminLayout: React.FC<AdminLayoutProps> = ({ children }) => {
       path: "/admin/logs",
     },
     {
+      title: "Profile",
+      icon: <UserCog className="h-5 w-5" />,
+      path: "/admin/profile",
+    },
+    {
       title: "Settings",
       icon: <Settings className="h-5 w-5" />,
       path: "/admin/settings",
