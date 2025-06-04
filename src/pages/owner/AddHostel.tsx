@@ -82,7 +82,7 @@ const AddHostel = () => {
         },
         lat: data.lat,
         lng: data.lng,
-        status: "draft",
+        status: "pending",
         images: uploadedImageUrls,
         video_url: data.videoUrls?.[0] || null,
         updated_at: new Date().toISOString(),

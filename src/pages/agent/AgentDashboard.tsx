@@ -30,7 +30,7 @@ const AgentDashboard = () => {
         .eq("agent_id", userId);
 
       const total = hostels?.length || 0;
-      const approved = hostels?.filter(h => h.status === "approved").length || 0;
+      const approved = hostels?.filter(h => h.status === "verified").length || 0;
       const pending = hostels?.filter(h => h.status === "pending").length || 0;
 
       setStats([
@@ -42,11 +42,11 @@ const AgentDashboard = () => {
           change: `+${total} total`,
         },
         {
-          title: "Approved Hostels",
+          title: "Verified Hostels",
           value: approved,
           icon: <CheckCircleIcon className="h-5 w-5 text-green-500" />,
           iconBg: "bg-green-100",
-          change: `${((approved / total) * 100 || 0).toFixed(0)}% approval rate`,
+          change: `${((approved / total) * 100 || 0).toFixed(0)}% verification rate`,
         },
         {
           title: "Pending Approvals",

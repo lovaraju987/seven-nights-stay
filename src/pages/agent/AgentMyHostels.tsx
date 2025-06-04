@@ -15,12 +15,10 @@ import { Search, Edit, Eye, Phone, Camera } from "lucide-react";
 const HostelCard = ({ hostel, navigate }: { hostel: any; navigate: any }) => {
   const getStatusBadgeVariant = (status: string) => {
     switch (status) {
-      case "approved":
+      case "verified":
         return "success";
       case "pending":
         return "outline";
-      case "draft":
-        return "secondary";
       case "rejected":
         return "destructive";
       default:
@@ -29,12 +27,10 @@ const HostelCard = ({ hostel, navigate }: { hostel: any; navigate: any }) => {
   };
   const getStatusLabel = (status: string) => {
     switch (status) {
-      case "approved":
-        return "Approved";
+      case "verified":
+        return "Verified";
       case "pending":
         return "Pending";
-      case "draft":
-        return "Draft";
       case "rejected":
         return "Rejected";
       default:
@@ -189,12 +185,8 @@ const AgentMyHostels = () => {
   // These are used by the empty state in "all" only:
   const getStatusBadgeVariant = (status: string) => {
     switch (status) {
-      case "approved":
-        return "success";
       case "pending":
         return "outline";
-      case "draft":
-        return "secondary";
       case "rejected":
         return "destructive";
       default:
@@ -203,12 +195,8 @@ const AgentMyHostels = () => {
   };
   const getStatusLabel = (status: string) => {
     switch (status) {
-      case "approved":
-        return "Approved";
       case "pending":
         return "Pending";
-      case "draft":
-        return "Draft";
       case "rejected":
         return "Rejected";
       default:
@@ -238,9 +226,8 @@ const AgentMyHostels = () => {
         <Tabs defaultValue="all">
           <TabsList className="mb-4">
             <TabsTrigger value="all">All</TabsTrigger>
-            <TabsTrigger value="approved">Approved</TabsTrigger>
+            <TabsTrigger value="verified">Verified</TabsTrigger>
             <TabsTrigger value="pending">Pending</TabsTrigger>
-            <TabsTrigger value="draft">Draft</TabsTrigger>
             <TabsTrigger value="rejected">Rejected</TabsTrigger>
           </TabsList>
 
@@ -274,17 +261,17 @@ const AgentMyHostels = () => {
             )}
           </TabsContent>
 
-          <TabsContent value="approved" className="space-y-4">
-            {filteredHostels.filter(h => h.status === "approved").length > 0 ? (
+          <TabsContent value="verified" className="space-y-4">
+            {filteredHostels.filter(h => h.status === "verified").length > 0 ? (
               filteredHostels
-                .filter((hostel) => hostel.status === "approved")
+                .filter((hostel) => hostel.status === "verified")
                 .map((hostel) => (
                   <HostelCard key={hostel.id} hostel={hostel} navigate={navigate} />
                 ))
             ) : (
               <Card>
                 <CardContent className="p-6 text-center text-gray-500">
-                  No approved hostels found.
+                  No verified hostels found.
                 </CardContent>
               </Card>
             )}
@@ -306,21 +293,6 @@ const AgentMyHostels = () => {
             )}
           </TabsContent>
 
-          <TabsContent value="draft" className="space-y-4">
-            {filteredHostels.filter(h => h.status === "draft").length > 0 ? (
-              filteredHostels
-                .filter((hostel) => hostel.status === "draft")
-                .map((hostel) => (
-                  <HostelCard key={hostel.id} hostel={hostel} navigate={navigate} />
-                ))
-            ) : (
-              <Card>
-                <CardContent className="p-6 text-center text-gray-500">
-                  No draft hostels found.
-                </CardContent>
-              </Card>
-            )}
-          </TabsContent>
 
           <TabsContent value="rejected" className="space-y-4">
             {filteredHostels.filter(h => h.status === "rejected").length > 0 ? (

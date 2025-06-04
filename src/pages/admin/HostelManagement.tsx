@@ -14,14 +14,12 @@ import {
 } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
 import { 
-  CheckCircle, 
-  XCircle, 
-  Eye, 
-  Search, 
-  Edit, 
-  Trash2, 
-  ShieldCheck, 
-  ShieldX,
+  CheckCircle,
+  XCircle,
+  Eye,
+  Search,
+  Edit,
+  Trash2,
 } from "lucide-react";
 import { toast } from "@/components/ui/sonner";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogDescription } from "@/components/ui/dialog";
@@ -57,20 +55,36 @@ const HostelManagement = () => {
     fetchHostels();
   }, []);
 
-  const handleVerify = (hostel: any) => {
+  const handleVerify = async (hostel: any) => {
+    const { error } = await supabase
+      .from("hostels")
+      .update({ status: "verified", verified_on: new Date().toISOString() })
+      .eq("id", hostel.id);
+    if (error) {
+      toast.error("Failed to verify hostel");
+      return;
+    }
     toast.success(`${hostel.name} has been verified successfully`);
+    setPendingHostels((prev) => prev.filter((h) => h.id !== hostel.id));
+    setVerifiedHostels((prev) => [{ ...hostel, status: "verified" }, ...prev]);
     setShowHostelDialog(false);
   };
 
-  const handleReject = (hostel: any) => {
+  const handleReject = async (hostel: any) => {
+    const { error } = await supabase
+      .from("hostels")
+      .update({ status: "rejected", rejected_on: new Date().toISOString() })
+      .eq("id", hostel.id);
+    if (error) {
+      toast.error("Failed to reject hostel");
+      return;
+    }
     toast.success(`${hostel.name} has been rejected`);
+    setPendingHostels((prev) => prev.filter((h) => h.id !== hostel.id));
+    setVerifiedHostels((prev) => [{ ...hostel, status: "rejected" }, ...prev]);
     setShowHostelDialog(false);
   };
 
-  const handleStatusToggle = (hostel: any) => {
-    const newStatus = hostel.status === "active" ? "inactive" : "active";
-    toast.success(`${hostel.name} is now ${newStatus}`);
-  };
 
   const filteredPendingHostels = pendingHostels.filter((hostel) =>
     hostel.name?.toLowerCase().includes(searchQuery.toLowerCase()) ||
@@ -215,9 +229,9 @@ const HostelManagement = () => {
                         <TableCell>{hostel.location}</TableCell>
                         <TableCell>
                           <Badge
-                            variant={hostel.status === "active" ? "success" : "destructive"}
+                            variant={hostel.status === "verified" ? "success" : "destructive"}
                           >
-                            {hostel.status === "active" ? "Active" : "Inactive"}
+                            {hostel.status === "verified" ? "Verified" : "Rejected"}
                           </Badge>
                         </TableCell>
                         <TableCell>
@@ -236,18 +250,6 @@ const HostelManagement = () => {
                               onClick={() => navigate(`/admin/hostel/${hostel.id}`)}
                             >
                               <Edit className="h-4 w-4" />
-                            </Button>
-                            <Button
-                              variant="ghost"
-                              size="icon"
-                              className={hostel.status === "active" ? "text-red-600" : "text-green-600"}
-                              onClick={() => handleStatusToggle(hostel)}
-                            >
-                              {hostel.status === "active" ? (
-                                <ShieldX className="h-4 w-4" />
-                              ) : (
-                                <ShieldCheck className="h-4 w-4" />
-                              )}
                             </Button>
                           </div>
                         </TableCell>
@@ -302,16 +304,16 @@ const HostelManagement = () => {
                     </div>
                     <div>
                       <span className="text-sm text-gray-500">Status:</span>
-                      <Badge 
+                      <Badge
                         variant={
-                          selectedHostel.status === "active" 
-                            ? "success" 
-                            : selectedHostel.status === "pending" 
-                              ? "outline" 
+                          selectedHostel.status === "verified"
+                            ? "success"
+                            : selectedHostel.status === "pending"
+                              ? "outline"
                               : "destructive"
                         }
                       >
-                        {selectedHostel.status === "active" ? "Active" : selectedHostel.status === "pending" ? "Pending" : "Inactive"}
+                        {selectedHostel.status === "verified" ? "Verified" : selectedHostel.status === "pending" ? "Pending" : "Rejected"}
                       </Badge>
                     </div>
                     <div>
@@ -334,8 +336,23 @@ const HostelManagement = () => {
                   {/* ...rest of dialog... */}
                 </div>
               </div>
-            </DialogContent>
-          </Dialog>
+            </div>
+            {dialogAction !== "view" && (
+              <DialogFooter>
+                <Button
+                  variant="outline"
+                  onClick={() =>
+                    dialogAction === "verify"
+                      ? handleVerify(selectedHostel)
+                      : handleReject(selectedHostel)
+                  }
+                >
+                  {dialogAction === "verify" ? "Approve" : "Reject"}
+                </Button>
+              </DialogFooter>
+            )}
+          </DialogContent>
+        </Dialog>
         )}
       </AdminLayout>
     );

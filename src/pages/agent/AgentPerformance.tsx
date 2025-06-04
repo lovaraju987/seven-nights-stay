@@ -37,7 +37,7 @@ const AgentPerformance = () => {
         .eq("agent_id", userId);
 
       const hostelCount = hostels?.length || 0;
-      const approvalCount = hostels?.filter(h => h.status === "approved").length || 0;
+      const approvalCount = hostels?.filter(h => h.status === "verified").length || 0;
       const approvalRate = hostelCount ? Math.round((approvalCount / hostelCount) * 100) : 0;
 
       const taskCount = tasks?.length || 0;
@@ -78,7 +78,7 @@ const AgentPerformance = () => {
         const name = allProfiles?.find(p => p.id === id)?.name || "Unnamed";
         if (!agentStats[id]) agentStats[id] = { name, hostels: 0, approved: 0 };
         agentStats[id].hostels += 1;
-        if (h.status === "approved") agentStats[id].approved += 1;
+        if (h.status === "verified") agentStats[id].approved += 1;
       });
 
       const sortedAgents = Object.values(agentStats)
@@ -119,7 +119,7 @@ const AgentPerformance = () => {
           <Card>
             <CardContent className="p-6">
               <div className="text-2xl font-bold text-green-600">{performance.approvalRate}%</div>
-              <p className="text-sm text-gray-500">Approval Rate</p>
+              <p className="text-sm text-gray-500">Verification Rate</p>
             </CardContent>
           </Card>
           <Card>
