@@ -21,10 +21,14 @@ const HostelDetail = () => {
   const [loading, setLoading] = useState(true);
   const [currentImageIndex, setCurrentImageIndex] = useState(0);
   const [isFavorite, setIsFavorite] = useState(false);
+  const [userId, setUserId] = useState<string | null>(null);
 
   useEffect(() => {
     const fetchData = async () => {
       setLoading(true);
+      const { data: authData } = await supabase.auth.getUser();
+      setUserId(authData?.user?.id || null);
+
       // Fetch hostel
       const { data: hostelData, error: hostelError } = await supabase
         .from("hostels")
@@ -52,21 +56,22 @@ const HostelDetail = () => {
   }, [hostelId]);
 
   useEffect(() => {
-    // Check if hostel is in wishlist
-    const checkWishlist = () => {
-      const storedWishlist = localStorage.getItem("hostelWishlist");
-      if (storedWishlist && hostelId) {
-        try {
-          const parsedWishlist = JSON.parse(storedWishlist);
-          const isWishlisted = parsedWishlist.some((item: any) => item.id === hostelId);
-          setIsFavorite(isWishlisted);
-        } catch (error) {
-          console.error("Error parsing wishlist from localStorage:", error);
-        }
+    const checkWishlist = async () => {
+      if (!userId || !hostelId) return;
+      const { data, error } = await supabase
+        .from('wishlists')
+        .select('id')
+        .eq('user_id', userId)
+        .eq('hostel_id', hostelId)
+        .single();
+      if (!error && data) {
+        setIsFavorite(true);
+      } else {
+        setIsFavorite(false);
       }
     };
     checkWishlist();
-  }, [hostelId]);
+  }, [hostelId, userId]);
 
   const handleNextImage = () => {
     setCurrentImageIndex((prev) => (prev + 1) % hostel.images.length);
@@ -76,38 +81,28 @@ const HostelDetail = () => {
     setCurrentImageIndex((prev) => (prev - 1 + hostel.images.length) % hostel.images.length);
   };
 
-  const toggleFavorite = () => {
-    // Get current wishlist
-    const storedWishlist = localStorage.getItem("hostelWishlist");
-    let currentWishlist = storedWishlist ? JSON.parse(storedWishlist) : [];
-    
+  const toggleFavorite = async () => {
+    if (!userId || !hostelId) return;
+
     if (isFavorite) {
-      // Remove from wishlist
-      currentWishlist = currentWishlist.filter((item: any) => item.id !== hostelId);
-      toast("Removed from wishlist");
+      const { error } = await supabase
+        .from('wishlists')
+        .delete()
+        .eq('user_id', userId)
+        .eq('hostel_id', hostelId);
+      if (!error) {
+        toast('Removed from wishlist');
+        setIsFavorite(false);
+      }
     } else {
-      // Create simplified hostel object for wishlist
-      const wishlistItem = {
-        id: hostel.id,
-        name: hostel.name,
-        gender: hostel.gender,
-        location: hostel.location,
-        rating: hostel.rating,
-        price: hostel.rooms[0].dailyPrice, // Using the price of the first room type
-        availableBeds: hostel.rooms.reduce((total: number, room: any) => total + room.availableBeds, 0),
-        image: hostel.images[0]
-      };
-      
-      // Add to wishlist
-      currentWishlist.push(wishlistItem);
-      toast("Added to wishlist");
+      const { error } = await supabase
+        .from('wishlists')
+        .insert([{ user_id: userId, hostel_id: hostelId }]);
+      if (!error) {
+        toast('Added to wishlist');
+        setIsFavorite(true);
+      }
     }
-    
-    // Update localStorage
-    localStorage.setItem("hostelWishlist", JSON.stringify(currentWishlist));
-    
-    // Update state
-    setIsFavorite(!isFavorite);
   };
 
   const handleShare = () => {

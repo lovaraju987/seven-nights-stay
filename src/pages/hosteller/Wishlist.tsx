@@ -5,6 +5,7 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { MapPin, Star, Heart, ArrowLeft } from "lucide-react";
 import { toast } from "@/components/ui/sonner";
+import { supabase } from "@/lib/supabase";
 
 interface WishlistedHostel {
   id: string;
@@ -20,37 +21,46 @@ interface WishlistedHostel {
 const Wishlist = () => {
   const navigate = useNavigate();
   const [wishlistedHostels, setWishlistedHostels] = useState<WishlistedHostel[]>([]);
+  const [userId, setUserId] = useState<string | null>(null);
 
   useEffect(() => {
-    // Load wishlisted hostels from localStorage
-    const loadWishlist = () => {
-      const storedWishlist = localStorage.getItem("hostelWishlist");
-      if (storedWishlist) {
-        try {
-          const parsedWishlist = JSON.parse(storedWishlist);
-          setWishlistedHostels(parsedWishlist);
-        } catch (error) {
-          console.error("Error parsing wishlist from localStorage:", error);
-          setWishlistedHostels([]);
-        }
+    const fetchWishlist = async () => {
+      const { data: userData } = await supabase.auth.getUser();
+      const uid = userData?.user?.id || null;
+      setUserId(uid);
+
+      if (!uid) return;
+
+      const { data, error } = await supabase
+        .from('wishlists')
+        .select('hostels(*)')
+        .eq('user_id', uid);
+      if (error) {
+        console.error('Error fetching wishlist:', error);
+        setWishlistedHostels([]);
+      } else if (data) {
+        const hostels = data.map(item => item.hostels);
+        setWishlistedHostels(hostels as any);
       }
     };
 
-    loadWishlist();
+    fetchWishlist();
   }, []);
 
-  const handleRemoveFromWishlist = (hostelId: string) => {
-    // Remove hostel from wishlist
-    const updatedWishlist = wishlistedHostels.filter(hostel => hostel.id !== hostelId);
-    
-    // Update localStorage
-    localStorage.setItem("hostelWishlist", JSON.stringify(updatedWishlist));
-    
-    // Update state
-    setWishlistedHostels(updatedWishlist);
-    
-    // Show toast
-    toast("Removed from wishlist");
+  const handleRemoveFromWishlist = async (hostelId: string) => {
+    if (!userId) return;
+
+    const { error } = await supabase
+      .from('wishlists')
+      .delete()
+      .eq('user_id', userId)
+      .eq('hostel_id', hostelId);
+
+    if (!error) {
+      const updatedWishlist = wishlistedHostels.filter(hostel => hostel.id !== hostelId);
+      setWishlistedHostels(updatedWishlist);
+      toast('Removed from wishlist');
+    }
   };
 
   const handleHostelClick = (hostelId: string) => {

@@ -14,6 +14,7 @@ const Home = () => {
   const [searchQuery, setSearchQuery] = useState("");
   const [selectedFilter, setSelectedFilter] = useState<string | null>(null);
   const [wishlistedHostelIds, setWishlistedHostelIds] = useState<string[]>([]);
+  const [userId, setUserId] = useState<string | null>(null);
   const [appliedFilters, setAppliedFilters] = useState<{
     priceRange?: number[];
     amenities?: Record<string, boolean>;
@@ -29,35 +30,39 @@ const Home = () => {
     { id: "co-ed", label: "Co-ed", icon: <User className="h-3.5 w-3.5" /> }
   ];
 
-  // Fetch hostels from Supabase
+  // Fetch hostels and wishlist from Supabase
   useEffect(() => {
-    const fetchHostels = async () => {
-      const { data, error } = await supabase
+    const fetchData = async () => {
+      const { data: userData } = await supabase.auth.getUser();
+      const uid = userData?.user?.id || null;
+      setUserId(uid);
+
+      const { data: hostelsData, error: hostelsError } = await supabase
         .from("hostels")
         .select("*");
-      console.log({ hostels: data, error });
-      if (error) {
-        console.error("Error fetching hostels:", error);
+      if (hostelsError) {
+        console.error("Error fetching hostels:", hostelsError);
         toast({
-          description: `Failed to load hostels: ${error.message}`,
+          description: `Failed to load hostels: ${hostelsError.message}`,
         });
-        return;
       } else {
-        setHostels(data || []);
+        setHostels(hostelsData || []);
+      }
+
+      if (uid) {
+        const { data: wishlistData, error: wishlistError } = await supabase
+          .from("wishlists")
+          .select("hostel_id")
+          .eq("user_id", uid);
+        if (wishlistError) {
+          console.error("Error loading wishlist:", wishlistError);
+        } else {
+          setWishlistedHostelIds(wishlistData.map(w => w.hostel_id));
+        }
       }
     };
-    fetchHostels();
-    
-    // Load wishlist
-    const storedWishlist = localStorage.getItem("hostelWishlist");
-    if (storedWishlist) {
-      try {
-        const parsedWishlist = JSON.parse(storedWishlist);
-        setWishlistedHostelIds(parsedWishlist.map((hostel: any) => hostel.id));
-      } catch (error) {
-        console.error("Error parsing wishlist from localStorage:", error);
-      }
-    }
+
+    fetchData();
     
     // Load filters
     const storedFilters = localStorage.getItem("hostelFilters");
@@ -127,35 +132,32 @@ const Home = () => {
     window.open(mapUrl, '_blank');
   };
 
-  const toggleWishlist = (hostel: any, e: React.MouseEvent) => {
+  const toggleWishlist = async (hostel: any, e: React.MouseEvent) => {
     e.stopPropagation();
-    
-    // Get current wishlist
-    const storedWishlist = localStorage.getItem("hostelWishlist");
-    let currentWishlist = storedWishlist ? JSON.parse(storedWishlist) : [];
-    
-    // Check if hostel is already in wishlist
-    const isWishlisted = currentWishlist.some((item: any) => item.id === hostel.id);
-    
+
+    if (!userId) return;
+
+    const isWishlisted = wishlistedHostelIds.includes(hostel.id);
+
     if (isWishlisted) {
-      // Remove from wishlist
-      currentWishlist = currentWishlist.filter((item: any) => item.id !== hostel.id);
-      toast({
-        description: "Removed from wishlist"
-      });
+      const { error } = await supabase
+        .from('wishlists')
+        .delete()
+        .eq('user_id', userId)
+        .eq('hostel_id', hostel.id);
+      if (!error) {
+        toast({ description: 'Removed from wishlist' });
+        setWishlistedHostelIds(ids => ids.filter(id => id !== hostel.id));
+      }
     } else {
-      // Add to wishlist
-      currentWishlist.push(hostel);
-      toast({
-        description: "Added to wishlist"
-      });
+      const { error } = await supabase
+        .from('wishlists')
+        .insert([{ user_id: userId, hostel_id: hostel.id }]);
+      if (!error) {
+        toast({ description: 'Added to wishlist' });
+        setWishlistedHostelIds(ids => [...ids, hostel.id]);
+      }
     }
-    
-    // Update localStorage
-    localStorage.setItem("hostelWishlist", JSON.stringify(currentWishlist));
-    
-    // Update state
-    setWishlistedHostelIds(currentWishlist.map((item: any) => item.id));
   };
   
   const handleClearFilters = () => {
