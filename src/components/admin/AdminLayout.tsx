@@ -11,8 +11,6 @@ import {
   FileText, 
   Activity,
   Shield,
-  ShieldCheck,
-  Calendar,
   UserCog,
   LogOut,
   Menu,
@@ -47,16 +45,6 @@ const AdminLayout: React.FC<AdminLayoutProps> = ({ children }) => {
       title: "User & Owner Management",
       icon: <Users className="h-5 w-5" />,
       path: "/admin/users",
-    },
-    {
-      title: "Owner Management",
-      icon: <ShieldCheck className="h-5 w-5" />,
-      path: "/admin/owners",
-    },
-    {
-      title: "Booking Management",
-      icon: <Calendar className="h-5 w-5" />,
-      path: "/admin/bookings",
     },
     {
       title: "Complaints",
