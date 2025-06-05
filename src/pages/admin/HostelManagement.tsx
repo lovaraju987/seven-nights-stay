@@ -63,7 +63,7 @@ const HostelManagement = () => {
     const fetchHostels = async () => {
       const { data, error } = await supabase
         .from("hostels")
-        .select("*, profiles:owner_id(name)")
+        .select("*, owners:owner_id(name, email, phone)")
         .order("created_at", { ascending: false });
       if (error) {
         toast.error("Failed to fetch hostels");
@@ -113,13 +113,13 @@ const HostelManagement = () => {
 
   const filteredPendingHostels = pendingHostels.filter((hostel) =>
     hostel.name?.toLowerCase().includes(searchQuery.toLowerCase()) ||
-    (hostel.profiles?.name || "Unknown").toLowerCase().includes(searchQuery.toLowerCase()) ||
+    (hostel.owners?.name || "Unknown").toLowerCase().includes(searchQuery.toLowerCase()) ||
     (hostel.location || "").toLowerCase().includes(searchQuery.toLowerCase())
   );
 
   const filteredVerifiedHostels = verifiedHostels.filter((hostel) =>
     hostel.name?.toLowerCase().includes(searchQuery.toLowerCase()) ||
-    (hostel.profiles?.name || "Unknown").toLowerCase().includes(searchQuery.toLowerCase()) ||
+    (hostel.owners?.name || "Unknown").toLowerCase().includes(searchQuery.toLowerCase()) ||
     (hostel.location || "").toLowerCase().includes(searchQuery.toLowerCase())
   );
 
@@ -185,7 +185,7 @@ const HostelManagement = () => {
                       <Badge variant="outline" className="ml-2 whitespace-nowrap">{hostel.type}</Badge>
                     </div>
                     <div className="text-xs text-gray-600 mb-1">
-                      <span className="font-medium">Owner:</span> {hostel.profiles?.name || "Unknown"}
+                      <span className="font-medium">Owner:</span> {hostel.owners?.name || "Unknown"}
                     </div>
                     <div className="flex flex-wrap gap-2 mt-2">
                       <Button size="sm" variant="outline" className="flex-1 min-w-[90px]" onClick={() => openHostelDialog(hostel, "view")}>View</Button>
@@ -215,7 +215,7 @@ const HostelManagement = () => {
                       filteredPendingHostels.map((hostel) => (
                         <TableRow key={hostel.id}>
                           <TableCell className="font-medium">{hostel.name}</TableCell>
-                          <TableCell>{hostel.profiles?.name || "Unknown"}</TableCell>
+                          <TableCell>{hostel.owners?.name || "Unknown"}</TableCell>
                           <TableCell>
                             <Badge variant="outline">{hostel.type}</Badge>
                           </TableCell>
@@ -283,7 +283,7 @@ const HostelManagement = () => {
                       <Badge variant="outline" className="ml-2 whitespace-nowrap">{hostel.type}</Badge>
                     </div>
                     <div className="text-xs text-gray-600 mb-1">
-                      <span className="font-medium">Owner:</span> {hostel.profiles?.name || "Unknown"}
+                      <span className="font-medium">Owner:</span> {hostel.owners?.name || "Unknown"}
                     </div>
                     <div className="flex flex-wrap gap-2 mt-2">
                       <Button size="sm" variant="outline" className="flex-1 min-w-[90px]" onClick={() => openHostelDialog(hostel, "view")}>View</Button>
@@ -312,7 +312,7 @@ const HostelManagement = () => {
                       filteredVerifiedHostels.map((hostel) => (
                         <TableRow key={hostel.id}>
                           <TableCell className="font-medium">{hostel.name}</TableCell>
-                          <TableCell>{hostel.profiles?.name || "Unknown"}</TableCell>
+                          <TableCell>{hostel.owners?.name || "Unknown"}</TableCell>
                           <TableCell>
                             <Badge variant="outline">{hostel.type}</Badge>
                           </TableCell>

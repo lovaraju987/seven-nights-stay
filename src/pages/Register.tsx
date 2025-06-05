@@ -44,12 +44,22 @@ const Register = () => {
     }
 
     if (userId) {
+      // Always upsert into profiles for all roles
       await supabase.from("profiles").upsert({
         id: userId,
         email: email, // Include email in the profile upsert
         name: fullName,
         role,
       });
+      // If registering as owner, also insert into owners table
+      if (role === "owner") {
+        await supabase.from("owners").insert({
+          user_id: userId,
+          name: fullName,
+          email: email,
+          status: "active"
+        });
+      }
     }
 
     toast.success("Registration successful! Check your email for confirmation.");

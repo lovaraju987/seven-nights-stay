@@ -1,4 +1,3 @@
-
 import React, { useState, useRef } from "react";
 import { useNavigate } from "react-router-dom";
 import { Card, CardHeader, CardContent } from "@/components/ui/card";
@@ -23,6 +22,9 @@ const AddHostel = () => {
       state: "",
       agentNotes: "",
       videoUrls: [""],
+      lat: undefined,
+      lng: undefined,
+      hostelImages: undefined as FileList | undefined,
     },
   });
 
@@ -39,33 +41,40 @@ const AddHostel = () => {
       return;
     }
 
+    // Fetch the owner's record from the owners table
+    const { data: ownerRecord, error: ownerFetchError } = await supabase
+      .from("owners")
+      .select("id")
+      .eq("user_id", userId)
+      .single();
+    if (ownerFetchError || !ownerRecord) {
+      toast.error("Owner profile not found. Please contact support.");
+      return;
+    }
+
     // Upload images to Supabase Storage before inserting hostel
     const uploadedImageUrls: string[] = [];
 
     if (data.hostelImages && data.hostelImages.length > 0) {
-      for (const file of Array.from(data.hostelImages)) {
+      for (const file of Array.from(data.hostelImages as FileList)) {
+        if (!(file instanceof File)) continue;
         const sanitizedFileName = file.name
           .toLowerCase()
-          .replace(/\s+/g, "-")             // Replace spaces with dashes
-          .replace(/[^\w.-]+/g, "");        // Remove special characters
-
+          .replace(/\s+/g, "-")
+          .replace(/[^\w.-]+/g, "");
         const filePath = `${userId}/${Date.now()}-${sanitizedFileName}`;
         const { data: uploadData, error: uploadError } = await supabase.storage
           .from("hostel-images")
           .upload(filePath, file);
-
         if (uploadError) {
           console.error("Upload error:", uploadError.message);
           toast.error("Image upload failed.");
           return;
         }
-
-        // Use the correct way to get public URL as per new logic
         const { data: publicUrlData } = supabase.storage
           .from("hostel-images")
           .getPublicUrl(filePath);
         const publicUrl = publicUrlData?.publicUrl;
-
         uploadedImageUrls.push(publicUrl);
       }
     }
@@ -87,8 +96,7 @@ const AddHostel = () => {
         video_url: data.videoUrls?.[0] || null,
         updated_at: new Date().toISOString(),
         created_by: "owner",
-        owner_id: userId, // ✅ add this line
-
+        owner_id: ownerRecord.id, // Use owners.id
       }
     ]);
 
@@ -232,17 +240,19 @@ const AddHostel = () => {
                       <div className="grid grid-cols-2 gap-4 mt-2">
                         <div>
                           <label htmlFor="lat" className="block text-sm font-medium mb-1">Latitude *</label>
-                          <Input 
-                            id="lat"
-                            placeholder="17.385044"
+                          <Input
+                            type="number"
+                            step="any"
+                            placeholder="Latitude"
                             {...form.register("lat", { required: true })}
                           />
                         </div>
                         <div>
                           <label htmlFor="lng" className="block text-sm font-medium mb-1">Longitude *</label>
-                          <Input 
-                            id="lng"
-                            placeholder="78.486671"
+                          <Input
+                            type="number"
+                            step="any"
+                            placeholder="Longitude"
                             {...form.register("lng", { required: true })}
                           />
                         </div>
@@ -275,15 +285,7 @@ const AddHostel = () => {
                         accept="image/png, image/jpeg"
                         multiple
                         className="w-full p-2 border rounded"
-                        {...form.register("hostelImages", {
-                          validate: (files: FileList) => {
-                            for (let i = 0; i < files.length; i++) {
-                              const file = files[i];
-                              if (file.size > 5 * 1024 * 1024) return "Image too large (max 5MB)";
-                            }
-                            return true;
-                          }
-                        })}
+                        {...form.register("hostelImages")}
                       />
                       <p className="mt-1 text-xs text-gray-500">You can upload multiple images (JPG, PNG).</p>
                       {form.watch("hostelImages") && Array.from(form.watch("hostelImages")).map((file: File, index: number) => (

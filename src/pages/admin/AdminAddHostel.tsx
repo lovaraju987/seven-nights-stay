@@ -10,6 +10,9 @@ import { toast } from "@/components/ui/sonner";
 import { ArrowLeftIcon } from "lucide-react";
 import { GoogleMap, LoadScript, Marker, Autocomplete } from '@react-google-maps/api';
 import { supabase } from "@/lib/supabase";
+import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from "@/components/ui/select";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
+import { QRCodeCanvas } from 'qrcode.react';
 
 const AdminAddHostel = () => {
   const navigate = useNavigate();
@@ -17,25 +20,109 @@ const AdminAddHostel = () => {
     defaultValues: {
       hostelType: "",
       hostelName: "",
+      tagline: "",
+      referenceCode: "",
       address: "",
       city: "",
       state: "",
       agentNotes: "",
       videoUrls: [""],
-      // Add these fields for file and lat/lng
       hostelImages: undefined,
       lat: '',
       lng: '',
+      onSiteManager: '',
+      primaryPhone: '',
+      primaryEmail: '',
+      website: '',
+      pricePerNight: '',
+      securityDeposit: '',
+      minimumStay: '',
+      checkInTime: '',
+      checkOutTime: '',
+      cancellationPolicy: '',
+      totalBeds: '',
     },
   });
 
   const [mapCenter, setMapCenter] = useState({ lat: 17.385044, lng: 78.486671 });
   const [markerPosition, setMarkerPosition] = useState(mapCenter);
   const autocompleteRef = useRef(null);
+  const [owners, setOwners] = useState<any[]>([]);
+  const [selectedOwnerId, setSelectedOwnerId] = useState<string>("");
+  const [showAddOwnerDialog, setShowAddOwnerDialog] = useState(false);
+  const [newOwner, setNewOwner] = useState({ name: "", email: "", phone: "", password: "" });
+  const [creatingOwner, setCreatingOwner] = useState(false);
+  const [referenceCode, setReferenceCode] = useState(() => {
+    // Example: generate a code like HTL-000123 (could be improved to fetch from backend)
+    return `HTL-${Math.floor(100000 + Math.random() * 900000)}`;
+  });
+  const [agents, setAgents] = useState<any[]>([]);
+  const [selectedAgentId, setSelectedAgentId] = useState<string>("");
+  const [showQrDialog, setShowQrDialog] = useState(false);
+  const [createdHostelUrl, setCreatedHostelUrl] = useState("");
+
+  // Fetch owners and agents on mount
+  React.useEffect(() => {
+    const fetchOwners = async () => {
+      const { data, error } = await supabase
+        .from("owners")
+        .select("id, user_id, name, email, phone, status");
+      if (!error && data) setOwners(data);
+      else setOwners([]); // Ensure owners is always an array
+    };
+    const fetchAgents = async () => {
+      const { data, error } = await supabase
+        .from("profiles")
+        .select("id, name, email, phone, role")
+        .eq("role", "agent");
+      if (!error && data) setAgents(data);
+      else setAgents([]);
+    };
+    fetchOwners();
+    fetchAgents();
+  }, [showAddOwnerDialog]); // Refetch when dialog closes in case a new owner was added
+
+  const handleCreateOwner = async () => {
+    setCreatingOwner(true);
+    // 1. Create user in Supabase Auth
+    const { data, error: signUpError } = await supabase.auth.signUp({
+      email: newOwner.email,
+      password: newOwner.password,
+      options: { data: { name: newOwner.name, phone: newOwner.phone, role: "owner" } }
+    });
+    if (signUpError || !data.user) {
+      toast.error(signUpError?.message || "Failed to create owner");
+      setCreatingOwner(false);
+      return;
+    }
+    // 2. Insert into owners table
+    const { data: ownerInsert, error: ownerInsertError } = await supabase.from("owners").insert({
+      user_id: data.user.id,
+      name: newOwner.name,
+      email: newOwner.email,
+      phone: newOwner.phone,
+      status: "active"
+    }).select().single();
+    if (ownerInsertError || !ownerInsert) {
+      toast.error(ownerInsertError?.message || "Failed to insert owner details");
+      setCreatingOwner(false);
+      return;
+    }
+    // 3. Refresh owners list and select new owner
+    const { data: ownersList } = await supabase
+      .from("owners")
+      .select("id, user_id, name, email, phone, status");
+    setOwners(ownersList || []);
+    setSelectedOwnerId(ownerInsert.id);
+    setShowAddOwnerDialog(false);
+    setNewOwner({ name: "", email: "", phone: "", password: "" });
+    setCreatingOwner(false);
+    toast.success("Owner created successfully");
+  };
 
   const onSubmit = async (data) => {
     // Admin can add hostels as owner, but set created_by: 'admin'
-    // Optionally, allow admin to select owner_id or leave null
+    // Use selectedOwnerId from owners table
     const uploadedImageUrls = [];
     if (data.hostelImages && data.hostelImages.length > 0) {
       for (const file of Array.from(data.hostelImages as FileList)) {
@@ -56,10 +143,12 @@ const AdminAddHostel = () => {
         uploadedImageUrls.push(publicUrl);
       }
     }
-    const { error } = await supabase.from("hostels").insert([
+    const { data: insertResult, error } = await supabase.from("hostels").insert([
       {
         name: data.hostelName,
         type: data.hostelType,
+        tagline: data.tagline,
+        reference_code: referenceCode,
         description: data.agentNotes || "",
         address: {
           address: data.address,
@@ -68,20 +157,32 @@ const AdminAddHostel = () => {
         },
         lat: data.lat,
         lng: data.lng,
-        status: "verified", // Admin can directly verify
+        status: "verified",
         images: uploadedImageUrls,
-        video_url: data.videoUrls?.[0] || null,
+        video_urls: data.videoUrls?.filter(Boolean) || [],
         updated_at: new Date().toISOString(),
         created_by: "admin",
-        // Optionally: owner_id: null or select owner
+        owner_id: selectedOwnerId,
+        agent_id: selectedAgentId || null,
+        on_site_manager: data.onSiteManager,
+        primary_phone: data.primaryPhone,
+        primary_email: data.primaryEmail,
+        website: data.website,
+        // Remove pricing/availability fields from here if not needed
       }
-    ]);
+    ]).select().single();
     if (error) {
       toast.error("Failed to submit hostel");
       return;
     }
+    // Generate public URL for QR code
+    const hostelId = insertResult?.id;
+    const publicUrl = `${window.location.origin}/hostel/${hostelId}`;
+    setCreatedHostelUrl(publicUrl);
+    setShowQrDialog(true);
     toast.success("Hostel added successfully!");
-    navigate("/admin/hostels");
+    // Optionally, navigate after closing QR dialog
+    // navigate("/admin/hostels");
   };
 
   return (
@@ -126,6 +227,23 @@ const AdminAddHostel = () => {
                       id="hostelName"
                       placeholder="E.g., Royal Boys Hostel" 
                       {...form.register("hostelName", { required: true })}
+                    />
+                  </div>
+                  <div>
+                    <label htmlFor="tagline" className="block text-sm font-medium mb-1">Short Tagline / Slogan</label>
+                    <Input
+                      id="tagline"
+                      placeholder="E.g., Clean Dorms in Andheri West"
+                      {...form.register("tagline")}
+                    />
+                  </div>
+                  <div>
+                    <label htmlFor="referenceCode" className="block text-sm font-medium mb-1">Reference Code</label>
+                    <Input
+                      id="referenceCode"
+                      value={referenceCode}
+                      readOnly
+                      className="bg-gray-100 cursor-not-allowed"
                     />
                   </div>
                   <div className="pt-4 border-t">
@@ -292,17 +410,96 @@ const AdminAddHostel = () => {
                       </Button>
                     </div>
                   </div>
+                  <div className="mb-4">
+                    <label className="block text-sm font-medium mb-1">Hostel Owner *</label>
+                    <div className="flex gap-2">
+                      <Select value={selectedOwnerId} onValueChange={setSelectedOwnerId}>
+                        <SelectTrigger className="w-full">
+                          <SelectValue placeholder={owners.length === 0 ? "No owners found. Add one." : "Select owner"} />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {owners.length === 0 ? (
+                            <div className="px-4 py-2 text-gray-500">No owners found</div>
+                          ) : (
+                            owners.map((owner) => (
+                              <SelectItem key={owner.id} value={owner.id}>
+                                {owner.name} ({owner.email})
+                              </SelectItem>
+                            ))
+                          )}
+                        </SelectContent>
+                      </Select>
+                      <Button type="button" variant="outline" onClick={() => setShowAddOwnerDialog(true)}>
+                        + Add Owner
+                      </Button>
+                    </div>
+                  </div>
+                  <div className="mb-4">
+                    <label className="block text-sm font-medium mb-1">Agent (Optional)</label>
+                    <Select value={selectedAgentId} onValueChange={setSelectedAgentId}>
+                      <SelectTrigger className="w-full">
+                        <SelectValue placeholder={agents.length === 0 ? "No agents found" : "Select agent (if any)"} />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {agents.length === 0 ? (
+                          <div className="px-4 py-2 text-gray-500">No agents found</div>
+                        ) : (
+                          agents.map((agent) => (
+                            <SelectItem key={agent.id} value={agent.id}>
+                              {agent.name} ({agent.email})
+                            </SelectItem>
+                          ))
+                        )}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  <div className="mb-4">
+                    <label htmlFor="onSiteManager" className="block text-sm font-medium mb-1">On-Site Manager</label>
+                    <Input
+                      id="onSiteManager"
+                      placeholder="Name of on-site manager (if different from owner)"
+                      {...form.register("onSiteManager")}
+                    />
+                  </div>
+                  <div className="mb-4">
+                    <label htmlFor="primaryPhone" className="block text-sm font-medium mb-1">Primary Phone *</label>
+                    <Input
+                      id="primaryPhone"
+                      placeholder="Owner or manager's phone number"
+                      {...form.register("primaryPhone", { required: true })}
+                    />
+                  </div>
+                  <div className="mb-4">
+                    <label htmlFor="primaryEmail" className="block text-sm font-medium mb-1">Primary Email *</label>
+                    <Input
+                      id="primaryEmail"
+                      type="email"
+                      placeholder="Owner or manager's email address"
+                      {...form.register("primaryEmail", { required: true })}
+                    />
+                  </div>
+                  <div className="mb-4">
+                    <label htmlFor="website" className="block text-sm font-medium mb-1">Website / Social Media URL</label>
+                    <Input
+                      id="website"
+                      placeholder="https://instagram.com/yourhostel or website URL"
+                      {...form.register("website")}
+                    />
+                  </div>
                 </div>
-                <div className="flex flex-col sm:flex-row gap-4 pt-4 border-t">
-                  <Button
-                    type="button"
-                    variant="outline"
-                    className="flex-1"
+                <div className="flex justify-end gap-4">
+                  <Button 
+                    type="button" 
+                    variant="outline" 
                     onClick={() => navigate("/admin/hostels")}
+                    className="w-full md:w-auto"
                   >
                     Cancel
                   </Button>
-                  <Button type="submit" className="flex-1">
+                  <Button 
+                    type="submit" 
+                    className="w-full md:w-auto"
+                  >
                     Add Hostel
                   </Button>
                 </div>
@@ -311,6 +508,107 @@ const AdminAddHostel = () => {
           </CardContent>
         </Card>
       </div>
+      {/* Add Owner Dialog */}
+      <Dialog open={showAddOwnerDialog} onOpenChange={setShowAddOwnerDialog}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Add New Owner</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4">
+            <div>
+              <label htmlFor="ownerName" className="block text-sm font-medium mb-1">Name *</label>
+              <Input
+                id="ownerName"
+                placeholder="Owner's full name"
+                value={newOwner.name}
+                onChange={e => setNewOwner({ ...newOwner, name: e.target.value })}
+              />
+            </div>
+            <div>
+              <label htmlFor="ownerEmail" className="block text-sm font-medium mb-1">Email *</label>
+              <Input
+                id="ownerEmail"
+                type="email"
+                placeholder="Owner's email address"
+                value={newOwner.email}
+                onChange={e => setNewOwner({ ...newOwner, email: e.target.value })}
+              />
+            </div>
+            <div>
+              <label htmlFor="ownerPhone" className="block text-sm font-medium mb-1">Phone *</label>
+              <Input
+                id="ownerPhone"
+                placeholder="Owner's phone number"
+                value={newOwner.phone}
+                onChange={e => setNewOwner({ ...newOwner, phone: e.target.value })}
+              />
+            </div>
+            <div>
+              <label htmlFor="ownerPassword" className="block text-sm font-medium mb-1">Password *</label>
+              <Input
+                id="ownerPassword"
+                type="password"
+                placeholder="Set a password for the owner"
+                value={newOwner.password}
+                onChange={e => setNewOwner({ ...newOwner, password: e.target.value })}
+              />
+            </div>
+          </div>
+          <DialogFooter>
+            <Button 
+              variant="outline" 
+              onClick={() => setShowAddOwnerDialog(false)}
+            >
+              Cancel
+            </Button>
+            <Button 
+              onClick={handleCreateOwner} 
+              disabled={creatingOwner}
+            >
+              {creatingOwner ? 'Creating...' : 'Create Owner'}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+      {/* QR Code Dialog */}
+      <Dialog open={showQrDialog} onOpenChange={setShowQrDialog}>
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle>Hostel Created Successfully</DialogTitle>
+          </DialogHeader>
+          <div className="py-4">
+            <p className="text-sm text-gray-500 mb-4">
+              The hostel has been added successfully. You can share the QR code below for quick access.
+            </p>
+            <div className="flex justify-center mb-4">
+              {createdHostelUrl && <QRCodeCanvas value={createdHostelUrl} size={128} />}
+            </div>
+            <p className="text-center text-sm text-gray-500">
+              {createdHostelUrl}
+            </p>
+            <div className="flex justify-center mt-4 gap-2">
+              <Button
+                variant="outline"
+                onClick={() => {
+                  const canvas = document.querySelector('canvas');
+                  if (canvas) {
+                    const url = canvas.toDataURL('image/png');
+                    const a = document.createElement('a');
+                    a.href = url;
+                    a.download = 'hostel-qr.png';
+                    a.click();
+                  }
+                }}
+              >
+                Download QR Code
+              </Button>
+              <Button onClick={() => { setShowQrDialog(false); navigate("/admin/hostels"); }}>
+                Done
+              </Button>
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 };

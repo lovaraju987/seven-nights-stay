@@ -43,24 +43,41 @@ const UserManagement = () => {
 
   useEffect(() => {
     const fetchUsers = async () => {
+      // Fetch users and agents from profiles as before
       const { data: profiles, error } = await supabase
         .from("profiles")
         .select("id, name, phone, role, created_at, is_verified");
-
       if (error) {
         toast.error("Failed to load users");
         return;
       }
-
-      const { data: hostels } = await supabase
-        .from("hostels")
-        .select("owner_id");
-
-      const ownerHostelCounts = hostels?.reduce((acc: any, h: any) => {
-        acc[h.owner_id] = (acc[h.owner_id] || 0) + 1;
-        return acc;
-      }, {}) || {};
-
+      // Fetch owners from new owners table
+      const { data: ownersData, error: ownersError } = await supabase
+        .from("owners")
+        .select("id, user_id, name, phone, email, status, created_at");
+      if (ownersError) {
+        toast.error("Failed to load owners");
+        setOwners([]);
+      } else {
+        // Fetch hostels to count per owner
+        const { data: hostels } = await supabase
+          .from("hostels")
+          .select("owner_id");
+        const ownerHostelCounts = hostels?.reduce((acc: any, h: any) => {
+          acc[h.owner_id] = (acc[h.owner_id] || 0) + 1;
+          return acc;
+        }, {}) || {};
+        setOwners(
+          (ownersData || []).map((o: any) => ({
+            ...o,
+            joined: o.created_at,
+            hostels: ownerHostelCounts[o.id] || 0,
+            subscription: "active", // Placeholder, update if you add subscription logic
+            status: o.status === "active" ? "active" : "blocked",
+          }))
+        );
+      }
+      // Users and agents logic unchanged
       const users = profiles
         .filter((u: any) => u.role === "hosteller")
         .map((u: any) => ({
@@ -69,17 +86,6 @@ const UserManagement = () => {
           bookings: 0, // Replace later if needed
           status: u.is_verified ? "active" : "blocked",
         }));
-
-      const owners = profiles
-        .filter((u: any) => u.role === "owner")
-        .map((u: any) => ({
-          ...u,
-          joined: u.created_at,
-          hostels: ownerHostelCounts[u.id] || 0,
-          subscription: "active", // Replace if you add column later
-          status: u.is_verified ? "active" : "blocked",
-        }));
-
       const agents = profiles
         .filter((u: any) => u.role === "agent")
         .map((u: any) => ({
@@ -87,9 +93,7 @@ const UserManagement = () => {
           joined: u.created_at,
           status: u.is_verified ? "active" : "blocked",
         }));
-
       setUsers(users);
-      setOwners(owners);
       setAgents(agents);
     };
 
