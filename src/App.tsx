@@ -1,3 +1,4 @@
+
 import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
@@ -8,7 +9,6 @@ import NotFound from "./pages/NotFound";
 import SplashScreen from "./pages/SplashScreen";
 import RoleSelection from "./pages/RoleSelection";
 import Login from "./pages/Login";
-import Register from "./pages/Register";
 import Home from "./pages/hosteller/Home";
 import HostelDetail from "./pages/hosteller/HostelDetail";
 import Booking from "./pages/hosteller/Booking";
@@ -34,12 +34,8 @@ import AdminLogin from "./pages/admin/AdminLogin";
 import AdminDashboard from "./pages/admin/AdminDashboard";
 import HostelManagement from "./pages/admin/HostelManagement";
 import UserManagement from "./pages/admin/UserManagement";
-import Reports from "./pages/admin/Reports";
-import Settings from "./pages/admin/Settings";
-import Logs from "./pages/admin/Logs";
 import ComplaintManagement from "./pages/admin/ComplaintManagement";
 import SubscriptionPlans from "./pages/admin/SubscriptionPlans";
-import Notifications from "@/pages/admin/Notifications";
 
 // Agent Routes
 import AgentLogin from "./pages/agent/AgentLogin";
@@ -49,10 +45,6 @@ import AgentMyHostels from "./pages/agent/AgentMyHostels";
 import AgentTasks from "./pages/agent/AgentTasks";
 import AgentPerformance from "./pages/agent/AgentPerformance";
 import AgentProfile from "./pages/agent/AgentProfile";
-import AgentViewHostel from "./pages/agent/AgentViewHostel";
-import AgentEditHostel from "./pages/agent/AgentEditHostel";
-import AgentHostelImages from "./pages/agent/AgentHostelImages";
-import AgentContactHostel from "./pages/agent/AgentContactHostel";
 
 const queryClient = new QueryClient();
 
@@ -95,10 +87,6 @@ const App = () => (
           <Route path="/admin/users" element={<UserManagement />} />
           <Route path="/admin/complaints" element={<ComplaintManagement />} />
           <Route path="/admin/subscriptions" element={<SubscriptionPlans />} />
-          <Route path="/admin/notifications" element={<Notifications />} />
-          <Route path="/admin/reports" element={<Reports />} />
-          <Route path="/admin/logs" element={<Logs />} />
-          <Route path="/admin/settings" element={<Settings />} />
           
           {/* Agent Routes */}
           <Route path="/agent/login" element={<AgentLogin />} />
@@ -108,14 +96,9 @@ const App = () => (
           <Route path="/agent/tasks" element={<AgentTasks />} />
           <Route path="/agent/performance" element={<AgentPerformance />} />
           <Route path="/agent/profile" element={<AgentProfile />} />
-          <Route path="/agent/view-hostel/:id" element={<AgentViewHostel />} />
-          <Route path="/agent/edit-hostel/:id" element={<AgentEditHostel />} />
-          <Route path="/agent/hostel-images/:id" element={<AgentHostelImages />} />
-          <Route path="/agent/contact-hostel/:id" element={<AgentContactHostel />} />
           
           {/* Retain Default Routes */}
           <Route path="/index" element={<Index />} />
-          <Route path="/register" element={<Register />} />
           <Route path="*" element={<NotFound />} />
         </Routes>
       </BrowserRouter>

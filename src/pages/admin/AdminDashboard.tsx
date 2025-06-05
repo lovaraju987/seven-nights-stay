@@ -1,5 +1,5 @@
 
-import React, { useEffect, useState } from "react";
+import React from "react";
 import { useNavigate } from "react-router-dom";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -28,7 +28,6 @@ import {
   CreditCard,
   ShieldCheck,
 } from "lucide-react";
-import { supabase } from "@/lib/supabase";
 
 // Mock data for charts
 const bookingData = [
@@ -61,82 +60,51 @@ const COLORS = ["#0088FE", "#FF8042", "#FFBB28"];
 
 const AdminDashboard = () => {
   const navigate = useNavigate();
-  const [stats, setStats] = useState([
-    { title: "Total Hostels", value: "0", description: "", icon: <Home className="h-8 w-8 text-blue-500" />, onClick: () => navigate("/admin/hostels") },
-    { title: "Total Users", value: "0", description: "", icon: <Users className="h-8 w-8 text-green-500" />, onClick: () => navigate("/admin/users") },
-    { title: "Active Owners", value: "0", description: "", icon: <ShieldCheck className="h-8 w-8 text-violet-500" />, onClick: () => navigate("/admin/owners") },
-    { title: "Total Bookings", value: "0", description: "", icon: <Calendar className="h-8 w-8 text-yellow-500" />, onClick: () => navigate("/admin/bookings") },
-    { title: "Complaints", value: "0", description: "", icon: <AlertCircle className="h-8 w-8 text-red-500" />, onClick: () => navigate("/admin/complaints") },
-    { title: "Monthly Revenue", value: "₹0", description: "", icon: <CreditCard className="h-8 w-8 text-teal-500" />, onClick: () => navigate("/admin/reports") },
-  ]);
 
-  useEffect(() => {
-    const fetchStats = async () => {
-      const [hostelData, userData, ownerData, bookingData, complaintData] = await Promise.all([
-        supabase.from("hostels").select("*"),
-        supabase.from("profiles").select("*"),
-        supabase.from("profiles").select("*").eq("role", "owner"),
-        supabase.from("bookings").select("*"),
-        supabase.from("complaints").select("*"),
-      ]);
-
-      const verifiedHostels = hostelData.data?.filter((h) => h.status === "verified") || [];
-      const pendingHostels = hostelData.data?.filter((h) => h.status === "pending") || [];
-      const activeUsers = userData.data?.filter((u) => u.role === "hosteller" && u.status !== "blocked") || [];
-      const blockedUsers = userData.data?.filter((u) => u.role === "hosteller" && u.status === "blocked") || [];
-      const activeOwners = ownerData.data?.filter((o) => o.status === "active") || [];
-      const openComplaints = complaintData.data?.filter((c) => c.status === "open") || [];
-      const resolvedComplaints = complaintData.data?.filter((c) => c.status === "resolved") || [];
-
-      setStats([
-        {
-          title: "Total Hostels",
-          value: `${hostelData.data?.length || 0}`,
-          description: `Verified: ${verifiedHostels.length} | Pending: ${pendingHostels.length}`,
-          icon: <Home className="h-8 w-8 text-blue-500" />,
-          onClick: () => navigate("/admin/hostels"),
-        },
-        {
-          title: "Total Users",
-          value: `${activeUsers.length + blockedUsers.length}`,
-          description: `Active: ${activeUsers.length} | Blocked: ${blockedUsers.length}`,
-          icon: <Users className="h-8 w-8 text-green-500" />,
-          onClick: () => navigate("/admin/users"),
-        },
-        {
-          title: "Active Owners",
-          value: `${activeOwners.length}`,
-          description: `Subscription Active: ${activeOwners.length}`,
-          icon: <ShieldCheck className="h-8 w-8 text-violet-500" />,
-          onClick: () => navigate("/admin/owners"),
-        },
-        {
-          title: "Total Bookings",
-          value: `${bookingData.data?.length || 0}`,
-          description: `This Month: ${bookingData.data?.filter(b => new Date(b.created_at).getMonth() === new Date().getMonth()).length}`,
-          icon: <Calendar className="h-8 w-8 text-yellow-500" />,
-          onClick: () => navigate("/admin/bookings"),
-        },
-        {
-          title: "Complaints",
-          value: `${complaintData.data?.length || 0}`,
-          description: `Open: ${openComplaints.length} | Resolved: ${resolvedComplaints.length}`,
-          icon: <AlertCircle className="h-8 w-8 text-red-500" />,
-          onClick: () => navigate("/admin/complaints"),
-        },
-        {
-          title: "Monthly Revenue",
-          value: "₹0", // Optional: Replace with real revenue calculation later
-          description: "Real-time revenue integration coming soon",
-          icon: <CreditCard className="h-8 w-8 text-teal-500" />,
-          onClick: () => navigate("/admin/reports"),
-        },
-      ]);
-    };
-
-    fetchStats();
-    // eslint-disable-next-line
-  }, []);
+  const stats = [
+    {
+      title: "Total Hostels",
+      value: "124",
+      description: "Verified: 98 | Pending: 26",
+      icon: <Home className="h-8 w-8 text-blue-500" />,
+      onClick: () => navigate("/admin/hostels"),
+    },
+    {
+      title: "Total Users",
+      value: "3,542",
+      description: "Active: 3,128 | Blocked: 414",
+      icon: <Users className="h-8 w-8 text-green-500" />,
+      onClick: () => navigate("/admin/users"),
+    },
+    {
+      title: "Active Owners",
+      value: "86",
+      description: "Subscription Active: 74",
+      icon: <ShieldCheck className="h-8 w-8 text-violet-500" />,
+      onClick: () => navigate("/admin/owners"),
+    },
+    {
+      title: "Total Bookings",
+      value: "12,543",
+      description: "This Month: 843",
+      icon: <Calendar className="h-8 w-8 text-yellow-500" />,
+      onClick: () => navigate("/admin/bookings"),
+    },
+    {
+      title: "Complaints",
+      value: "12",
+      description: "Open: 5 | Resolved: 7",
+      icon: <AlertCircle className="h-8 w-8 text-red-500" />,
+      onClick: () => navigate("/admin/complaints"),
+    },
+    {
+      title: "Monthly Revenue",
+      value: "₹182,500",
+      description: "14% increase from last month",
+      icon: <CreditCard className="h-8 w-8 text-teal-500" />,
+      onClick: () => navigate("/admin/reports"),
+    },
+  ];
 
   return (
     <AdminLayout>

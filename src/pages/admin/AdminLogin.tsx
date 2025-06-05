@@ -4,50 +4,37 @@ import { useNavigate } from "react-router-dom";
 import { Card, CardHeader, CardContent, CardFooter } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
-import { InputOTP, InputOTPGroup, InputOTPSlot } from "@/components/ui/input-otp";
+import { Label } from "@/components/ui/label";
 import { toast } from "@/components/ui/sonner";
-import { Shield } from "lucide-react";
-import { supabase } from "@/lib/supabase";
+import { Shield, Eye, EyeOff } from "lucide-react";
 
 const AdminLogin = () => {
   const navigate = useNavigate();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
-  const [useEmail, setUseEmail] = useState(true);
-  const [phoneNumber, setPhoneNumber] = useState("");
-  const [otp, setOtp] = useState("");
-  const [showOtpInput, setShowOtpInput] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
+  const [showPassword, setShowPassword] = useState(false);
 
-  const handleLogin = async () => {
+  const handleLogin = (e: React.FormEvent) => {
+    e.preventDefault();
+    
     if (!email || !password) {
       toast.error("Please enter both email and password");
       return;
     }
+    
     setIsLoading(true);
-    // Supabase sign in
-    const { data, error } = await supabase.auth.signInWithPassword({ email, password });
-    if (error) {
-      toast.error(error.message);
+    
+    // Mock admin authentication
+    setTimeout(() => {
+      if (email === "admin@oneto7.com" && password === "admin123") {
+        toast.success("Admin login successful");
+        navigate("/admin/dashboard");
+      } else {
+        toast.error("Invalid credentials");
+      }
       setIsLoading(false);
-      return;
-    }
-
-    // Optional: Check role from user metadata or fetch from `profiles` table
-    const { data: profile } = await supabase
-      .from("profiles")
-      .select("role")
-      .eq("id", data.user.id)
-      .single();
-    if (profile?.role !== "admin") {
-      toast.error("Access denied. You are not an admin.");
-      setIsLoading(false);
-      return;
-    }
-
-    toast.success("Admin login successful");
-    navigate("/admin/dashboard");
-    setIsLoading(false);
+    }, 1500);
   };
 
   return (
@@ -62,106 +49,72 @@ const AdminLogin = () => {
           <h2 className="text-2xl font-bold">Admin Login</h2>
           <p className="text-gray-500 text-sm">Secure access for OneTo7 admin panel</p>
         </CardHeader>
-
-        <CardContent className="space-y-6">
-          {!showOtpInput ? (
-            <div className="space-y-4">
-              <p className="text-center text-sm text-gray-600">
-                {useEmail ? "Use Phone Number instead?" : "Use Email instead?"}
-                <button onClick={() => setUseEmail(!useEmail)} className="text-blue-600 ml-1 underline">
-                  Switch
-                </button>
-              </p>
-
-              {useEmail ? (
-                <>
-                  <Input
-                    placeholder="Email"
-                    type="email"
-                    value={email}
-                    onChange={(e) => setEmail(e.target.value)}
-                  />
-                  <Input
-                    placeholder="Password"
-                    type="password"
-                    value={password}
-                    onChange={(e) => setPassword(e.target.value)}
-                  />
-                </>
-              ) : (
-                <div className="flex">
-                  <div className="bg-gray-100 px-3 py-2 border border-r-0 rounded-l-md text-gray-500">+91</div>
-                  <Input
-                    className="rounded-l-none focus:ring-blue-500"
-                    placeholder="10-digit mobile number"
-                    value={phoneNumber}
-                    onChange={(e) => setPhoneNumber(e.target.value.replace(/\D/g, '').slice(0, 10))}
-                    type="tel"
-                    inputMode="numeric"
-                    pattern="[0-9]*"
-                    autoComplete="tel"
-                  />
-                </div>
-              )}
+        
+        <form onSubmit={handleLogin}>
+          <CardContent className="space-y-4">
+            <div className="space-y-2">
+              <Label htmlFor="email">Email</Label>
+              <Input
+                id="email"
+                type="email"
+                placeholder="admin@oneto7.com"
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
+              />
             </div>
-          ) : (
-            <div className="space-y-4">
-              <p className="text-center text-gray-600 text-sm">Enter the 6-digit OTP sent to +91 {phoneNumber}</p>
-              <div className="flex justify-center">
-                <InputOTP maxLength={6} value={otp} onChange={setOtp}>
-                  <InputOTPGroup>
-                    <InputOTPSlot index={0} />
-                    <InputOTPSlot index={1} />
-                    <InputOTPSlot index={2} />
-                    <InputOTPSlot index={3} />
-                    <InputOTPSlot index={4} />
-                    <InputOTPSlot index={5} />
-                  </InputOTPGroup>
-                </InputOTP>
+            
+            <div className="space-y-2">
+              <Label htmlFor="password">Password</Label>
+              <div className="relative">
+                <Input
+                  id="password"
+                  type={showPassword ? "text" : "password"}
+                  placeholder="••••••••"
+                  value={password}
+                  onChange={(e) => setPassword(e.target.value)}
+                />
+                <Button
+                  type="button"
+                  variant="ghost"
+                  size="icon"
+                  className="absolute right-0 top-0 h-10 w-10"
+                  onClick={() => setShowPassword(!showPassword)}
+                >
+                  {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                </Button>
               </div>
             </div>
-          )}
-        </CardContent>
-
-        <CardFooter className="flex flex-col space-y-4">
-          <Button
-            className="w-full"
-            onClick={() => {
-              if (useEmail) {
-                handleLogin();
-              } else {
-                if (showOtpInput) {
-                  if (otp.length !== 6) {
-                    toast.error("Please enter a valid 6-digit OTP");
-                    return;
-                  }
-                  setIsLoading(true);
-                  setTimeout(() => {
-                    toast.success("Login successful!");
-                    setIsLoading(false);
-                    navigate("/admin/dashboard");
-                  }, 1000);
-                } else {
-                  if (phoneNumber.length !== 10) {
-                    toast.error("Enter a valid phone number");
-                    return;
-                  }
-                  setShowOtpInput(true);
-                  toast.success("OTP sent to your phone");
-                }
-              }
-            }}
-            disabled={isLoading}
-          >
-            {showOtpInput ? "Verify & Login" : useEmail ? "Login" : "Send OTP"}
-          </Button>
-          <div className="text-center w-full mt-3 text-sm">
-            Don’t have an account?{" "}
-            <a href="/register" className="text-blue-600 underline">
-              Register here
-            </a>
-          </div>
-        </CardFooter>
+            
+            <Button
+              type="button"
+              variant="link"
+              className="px-0 text-indigo-600"
+              onClick={() => toast.info("Please contact system administrator to reset your password")}
+            >
+              Forgot password?
+            </Button>
+          </CardContent>
+          
+          <CardFooter>
+            <Button 
+              type="submit" 
+              className="w-full bg-indigo-600 hover:bg-indigo-700" 
+              disabled={isLoading}
+            >
+              {isLoading ? (
+                <span className="flex items-center gap-2">
+                  <svg className="animate-spin h-4 w-4" viewBox="0 0 24 24">
+                    <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" fill="none" />
+                    <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" />
+                  </svg>
+                  Signing in...
+                </span>
+              ) : (
+                "Sign In"
+              )}
+            </Button>
+          </CardFooter>
+        </form>
       </Card>
     </div>
   );
