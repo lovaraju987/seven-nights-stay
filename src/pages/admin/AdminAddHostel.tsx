@@ -87,40 +87,61 @@ const AdminAddHostel = () => {
 
   const handleCreateOwner = async () => {
     setCreatingOwner(true);
-    // 1. Create user in Supabase Auth
-    const { data, error: signUpError } = await supabase.auth.signUp({
-      email: newOwner.email,
-      password: newOwner.password,
-      options: { data: { name: newOwner.name, phone: newOwner.phone, role: "owner" } }
-    });
-    if (signUpError || !data.user) {
-      toast.error(signUpError?.message || "Failed to create owner");
+    try {
+      // 1. Create user in Supabase Auth
+      const { data, error: signUpError } = await supabase.auth.signUp({
+        email: newOwner.email,
+        password: newOwner.password,
+        options: { data: { name: newOwner.name, phone: newOwner.phone, role: "owner" } }
+      });
+      if (signUpError || !data.user) {
+        console.error("Supabase signUp error:", signUpError);
+        // Friendly error messages for common cases
+        if (signUpError?.message?.toLowerCase().includes("user already registered") || signUpError?.message?.toLowerCase().includes("user already exists")) {
+          toast.error("This email is already registered. Please use a different email.");
+        } else if (signUpError?.message?.toLowerCase().includes("invalid email")) {
+          toast.error("Please enter a valid email address.");
+        } else if (signUpError?.message?.toLowerCase().includes("password")) {
+          toast.error("Password is too weak. Please use a stronger password.");
+        } else {
+          toast.error(signUpError?.message || "Failed to create owner. The email may already be registered or there is a network issue.");
+        }
+        setCreatingOwner(false);
+        return;
+      }
+      // 2. Insert into owners table
+      const { data: ownerInsert, error: ownerInsertError } = await supabase.from("owners").insert({
+        user_id: data.user.id,
+        name: newOwner.name,
+        email: newOwner.email,
+        phone: newOwner.phone,
+        status: "active"
+      }).select().single();
+      if (ownerInsertError || !ownerInsert) {
+        console.error("Supabase owners insert error:", ownerInsertError);
+        toast.error(ownerInsertError?.message || "Failed to insert owner details");
+        setCreatingOwner(false);
+        return;
+      }
+      // 3. Refresh owners list and select new owner
+      const { data: ownersList, error: fetchOwnersError } = await supabase
+        .from("owners")
+        .select("id, user_id, name, email, phone, status");
+      if (fetchOwnersError) {
+        console.error("Supabase fetch owners error:", fetchOwnersError);
+        toast.error("Owner created but failed to refresh owner list.");
+      }
+      setOwners(ownersList || []);
+      setSelectedOwnerId(ownerInsert.id);
+      setShowAddOwnerDialog(false);
+      setNewOwner({ name: "", email: "", phone: "", password: "" });
+      toast.success("Owner created successfully");
+    } catch (err) {
+      console.error("Unexpected error in handleCreateOwner:", err);
+      toast.error("Unexpected error occurred. Please try again or check the console for details.");
+    } finally {
       setCreatingOwner(false);
-      return;
     }
-    // 2. Insert into owners table
-    const { data: ownerInsert, error: ownerInsertError } = await supabase.from("owners").insert({
-      user_id: data.user.id,
-      name: newOwner.name,
-      email: newOwner.email,
-      phone: newOwner.phone,
-      status: "active"
-    }).select().single();
-    if (ownerInsertError || !ownerInsert) {
-      toast.error(ownerInsertError?.message || "Failed to insert owner details");
-      setCreatingOwner(false);
-      return;
-    }
-    // 3. Refresh owners list and select new owner
-    const { data: ownersList } = await supabase
-      .from("owners")
-      .select("id, user_id, name, email, phone, status");
-    setOwners(ownersList || []);
-    setSelectedOwnerId(ownerInsert.id);
-    setShowAddOwnerDialog(false);
-    setNewOwner({ name: "", email: "", phone: "", password: "" });
-    setCreatingOwner(false);
-    toast.success("Owner created successfully");
   };
 
   const onSubmit = async (data) => {
