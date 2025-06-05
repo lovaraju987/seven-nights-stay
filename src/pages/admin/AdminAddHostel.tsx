@@ -189,28 +189,29 @@ const AdminAddHostel = () => {
   };
 
   return (
-    <div>
+    <div className="px-2 sm:px-0">
       <Button 
         variant="ghost" 
-        className="mb-6"
+        className="mb-4 sm:mb-6"
         onClick={() => navigate("/admin/hostels")}
       >
         <ArrowLeftIcon className="h-4 w-4 mr-2" />
         Back to Hostels
       </Button>
-      <h1 className="text-2xl font-bold mb-6">Add Hostel (Admin)</h1>
-      <div className="max-w-4xl">
-        <Card>
-          <CardHeader>
-            <h2 className="text-lg font-medium">Hostel Information</h2>
-            <p className="text-sm text-gray-500">
+      <h1 className="text-xl sm:text-2xl font-bold mb-4 sm:mb-6">Add Hostel (Admin)</h1>
+      <div className="w-full max-w-4xl mx-auto">
+        <Card className="p-2 sm:p-6 rounded-lg shadow-md">
+          <CardHeader className="px-0 pt-0 pb-2 sm:pb-4">
+            <h2 className="text-lg sm:text-xl font-medium">Hostel Information</h2>
+            <p className="text-xs sm:text-sm text-gray-500">
               Add details to list a hostel
             </p>
           </CardHeader>
-          <CardContent>
+          <CardContent className="px-0">
             <Form {...form}>
-              <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
-                <div className="space-y-4">
+              <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4 sm:space-y-6">
+                {/* Hostel Information */}
+                <div className="space-y-3 sm:space-y-4">
                   <div className="mb-4">
                     <label htmlFor="hostelType" className="block text-sm font-medium mb-1">Hostel Type *</label>
                     <select 
@@ -230,6 +231,7 @@ const AdminAddHostel = () => {
                       id="hostelName"
                       placeholder="E.g., Royal Boys Hostel" 
                       {...form.register("hostelName", { required: true })}
+                      className="w-full text-sm"
                     />
                   </div>
                   <div>
@@ -238,6 +240,7 @@ const AdminAddHostel = () => {
                       id="tagline"
                       placeholder="E.g., Clean Dorms in Andheri West"
                       {...form.register("tagline")}
+                      className="w-full text-sm"
                     />
                   </div>
                   <div>
@@ -246,7 +249,7 @@ const AdminAddHostel = () => {
                       id="referenceCode"
                       value={referenceCode}
                       readOnly
-                      className="bg-gray-100 cursor-not-allowed"
+                      className="bg-gray-100 cursor-not-allowed w-full text-sm"
                     />
                   </div>
                   <div className="pt-4 border-t">
@@ -258,6 +261,7 @@ const AdminAddHostel = () => {
                         placeholder="Complete address with building name, street, etc."
                         rows={3}
                         {...form.register("address", { required: true })}
+                        className="w-full text-sm"
                       />
                     </div>
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mt-4">
@@ -267,6 +271,7 @@ const AdminAddHostel = () => {
                           id="city"
                           placeholder="E.g., Mumbai" 
                           {...form.register("city", { required: true })} 
+                          className="w-full text-sm"
                         />
                       </div>
                       <div>
@@ -275,6 +280,7 @@ const AdminAddHostel = () => {
                           id="state"
                           placeholder="E.g., Maharashtra" 
                           {...form.register("state", { required: true })} 
+                          className="w-full text-sm"
                         />
                       </div>
                     </div>
@@ -331,6 +337,7 @@ const AdminAddHostel = () => {
                             id="lat"
                             placeholder="17.385044"
                             {...form.register("lat" as const, { required: true })}
+                            className="w-full text-sm"
                           />
                         </div>
                         <div>
@@ -339,6 +346,7 @@ const AdminAddHostel = () => {
                             id="lng"
                             placeholder="78.486671"
                             {...form.register("lng" as const, { required: true })}
+                            className="w-full text-sm"
                           />
                         </div>
                       </div>
@@ -353,6 +361,7 @@ const AdminAddHostel = () => {
                         placeholder="Any additional information or observations about this hostel"
                         rows={4}
                         {...form.register("agentNotes")}
+                        className="w-full text-sm"
                       />
                     </div>
                   </div>
@@ -388,6 +397,7 @@ const AdminAddHostel = () => {
                           <Input
                             placeholder={`https://youtu.be/video${index + 1}`}
                             {...form.register(`videoUrls.${index}` as const)}
+                            className="w-full text-sm"
                           />
                           <Button
                             type="button"
@@ -462,6 +472,7 @@ const AdminAddHostel = () => {
                       id="onSiteManager"
                       placeholder="Name of on-site manager (if different from owner)"
                       {...form.register("onSiteManager")}
+                      className="w-full text-sm"
                     />
                   </div>
                   <div className="mb-4">
@@ -470,6 +481,7 @@ const AdminAddHostel = () => {
                       id="primaryPhone"
                       placeholder="Owner or manager's phone number"
                       {...form.register("primaryPhone", { required: true })}
+                      className="w-full text-sm"
                     />
                   </div>
                   <div className="mb-4">
@@ -479,6 +491,7 @@ const AdminAddHostel = () => {
                       type="email"
                       placeholder="Owner or manager's email address"
                       {...form.register("primaryEmail", { required: true })}
+                      className="w-full text-sm"
                     />
                   </div>
                   <div className="mb-4">
@@ -487,6 +500,7 @@ const AdminAddHostel = () => {
                       id="website"
                       placeholder="https://instagram.com/yourhostel or website URL"
                       {...form.register("website")}
+                      className="w-full text-sm"
                     />
                   </div>
                 </div>
@@ -525,6 +539,7 @@ const AdminAddHostel = () => {
                 placeholder="Owner's full name"
                 value={newOwner.name}
                 onChange={e => setNewOwner({ ...newOwner, name: e.target.value })}
+                className="w-full text-sm"
               />
             </div>
             <div>
@@ -535,6 +550,7 @@ const AdminAddHostel = () => {
                 placeholder="Owner's email address"
                 value={newOwner.email}
                 onChange={e => setNewOwner({ ...newOwner, email: e.target.value })}
+                className="w-full text-sm"
               />
             </div>
             <div>
@@ -544,6 +560,7 @@ const AdminAddHostel = () => {
                 placeholder="Owner's phone number"
                 value={newOwner.phone}
                 onChange={e => setNewOwner({ ...newOwner, phone: e.target.value })}
+                className="w-full text-sm"
               />
             </div>
             <div>
@@ -554,6 +571,7 @@ const AdminAddHostel = () => {
                 placeholder="Set a password for the owner"
                 value={newOwner.password}
                 onChange={e => setNewOwner({ ...newOwner, password: e.target.value })}
+                className="w-full text-sm"
               />
             </div>
           </div>

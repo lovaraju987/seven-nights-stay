@@ -11,22 +11,32 @@ import { toast } from "@/components/ui/sonner";
 import { ArrowLeftIcon } from "lucide-react";
 import { GoogleMap, LoadScript, Marker, Autocomplete } from '@react-google-maps/api';
 import { supabase } from "@/lib/supabase";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
+import { QRCodeCanvas } from 'qrcode.react';
 
 const AgentAddHostel = () => {
   const navigate = useNavigate();
+  const [referenceCode] = useState(() => `HTL-${Math.floor(100000 + Math.random() * 900000)}`);
+  const [showQrDialog, setShowQrDialog] = useState(false);
+  const [createdHostelUrl, setCreatedHostelUrl] = useState("");
   const form = useForm({
     defaultValues: {
       hostelType: "",
       hostelName: "",
-      ownerName: "",
-      ownerPhone: "",
-      ownerWhatsapp: "",
+      tagline: "",
+      referenceCode: referenceCode,
       address: "",
       city: "",
       state: "",
-      isOwnerAware: "yes",
       agentNotes: "",
       videoUrls: [""],
+      hostelImages: undefined as FileList | undefined,
+      lat: '',
+      lng: '',
+      onSiteManager: '',
+      primaryPhone: '',
+      primaryEmail: '',
+      website: '',
     },
   });
 
@@ -45,47 +55,39 @@ const AgentAddHostel = () => {
   const onSubmit = async (data: any) => {
     const { data: userData } = await supabase.auth.getUser();
     const userId = userData?.user?.id;
-
     if (!userId) {
       toast.error("You must be logged in to submit a hostel.");
       return;
     }
-
-    // Upload images to Supabase Storage before inserting hostel
     const uploadedImageUrls: string[] = [];
-
     if (data.hostelImages && data.hostelImages.length > 0) {
-      for (const file of Array.from(data.hostelImages)) {
+      for (const file of Array.from(data.hostelImages as FileList)) {
+        if (!(file instanceof File)) continue;
         const sanitizedFileName = file.name
           .toLowerCase()
-          .replace(/\s+/g, "-")             // Replace spaces with dashes
-          .replace(/[^\w.-]+/g, "");        // Remove special characters
-
+          .replace(/\s+/g, "-")
+          .replace(/[^\w.-]+/g, "");
         const filePath = `${userId}/${Date.now()}-${sanitizedFileName}`;
-        const { data: uploadData, error: uploadError } = await supabase.storage
+        const { error: uploadError } = await supabase.storage
           .from("hostel-images")
           .upload(filePath, file);
-
         if (uploadError) {
-          console.error("Upload error:", uploadError.message);
           toast.error("Image upload failed.");
           return;
         }
-
-        // Use the correct way to get public URL as per new logic
         const { data: publicUrlData } = supabase.storage
           .from("hostel-images")
           .getPublicUrl(filePath);
         const publicUrl = publicUrlData?.publicUrl;
-
         uploadedImageUrls.push(publicUrl);
       }
     }
-
-    const { error } = await supabase.from("hostels").insert([
+    const { data: insertResult, error } = await supabase.from("hostels").insert([
       {
         name: data.hostelName,
         type: data.hostelType,
+        tagline: data.tagline,
+        reference_code: referenceCode,
         description: data.agentNotes || "",
         address: {
           address: data.address,
@@ -94,151 +96,124 @@ const AgentAddHostel = () => {
         },
         lat: data.lat,
         lng: data.lng,
-        agent_id: userId,
         status: "pending",
         images: uploadedImageUrls,
-        video_url: data.videoUrls?.[0] || null,
+        video_urls: data.videoUrls?.filter(Boolean) || [],
+        updated_at: new Date().toISOString(),
         created_by: "agent",
-        owner_name: data.ownerName,
-        owner_phone: data.ownerPhone,
-        updated_at: new Date().toISOString()
+        agent_id: userId,
+        on_site_manager: data.onSiteManager,
+        primary_phone: data.primaryPhone,
+        primary_email: data.primaryEmail,
+        website: data.website,
       }
-    ]);
-
+    ]).select().single();
     if (error) {
-      console.error(error);
       toast.error("Failed to submit hostel");
       return;
     }
-
+    const hostelId = insertResult?.id;
+    const publicUrl = `${window.location.origin}/hostel/${hostelId}`;
+    setCreatedHostelUrl(publicUrl);
+    setShowQrDialog(true);
     toast.success("Hostel submitted successfully!");
-    navigate("/agent/my-hostels");
   };
 
   return (
     <AgentLayout>
-      <Button 
-        variant="ghost" 
-        className="mb-6"
-        onClick={() => navigate("/agent/dashboard")}
-      >
-        <ArrowLeftIcon className="h-4 w-4 mr-2" />
-        Back to Dashboard
-      </Button>
+      <div className="px-2 sm:px-0">
+        <Button 
+          variant="ghost" 
+          className="mb-4 sm:mb-6"
+          onClick={() => navigate("/agent/dashboard")}
+        >
+          <ArrowLeftIcon className="h-4 w-4 mr-2" />
+          Back to Dashboard
+        </Button>
 
-      <h1 className="text-2xl font-bold mb-6">Add Hostel</h1>
+        <h1 className="text-xl sm:text-2xl font-bold mb-4 sm:mb-6">Add Hostel</h1>
 
-      <div className="max-w-4xl">
-        <Card>
-          <CardHeader>
-            <h2 className="text-lg font-medium">Hostel Information</h2>
-            <p className="text-sm text-gray-500">
-              Add details on behalf of the hostel owner
-            </p>
-          </CardHeader>
-          <CardContent>
-            <Form {...form}>
-              <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
-                {/* Hostel Information */}
-                <div className="space-y-4">
-                  {/* Enhancement 1: Hostel Type Field */}
-                  <div className="mb-4">
-                    <label htmlFor="hostelType" className="block text-sm font-medium mb-1">Hostel Type *</label>
-                    <select 
-                      id="hostelType" 
-                      className="w-full p-2 border rounded"
-                      {...form.register("hostelType", { required: true })}
-                    >
-                      <option value="">Select Hostel Type</option>
-                      <option value="boys">Boys</option>
-                      <option value="girls">Girls</option>
-                      <option value="coed">Co-ed</option>
-                    </select>
-                  </div>
-                  <div>
-                    <label htmlFor="hostelName" className="block text-sm font-medium mb-1">Hostel Name *</label>
-                    <Input 
-                      id="hostelName"
-                      placeholder="E.g., Royal Boys Hostel" 
-                      {...form.register("hostelName", { required: true })}
-                    />
-                  </div>
-
-                  {/* Owner Information Section */}
-                  <div className="pt-4 border-t">
-                    <h3 className="font-medium mb-3">Owner Information</h3>
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                      <div>
-                        <label htmlFor="ownerName" className="block text-sm font-medium mb-1">Owner Name *</label>
-                        <Input 
-                          id="ownerName"
-                          placeholder="Full name of owner" 
-                          {...form.register("ownerName", { required: true })} 
-                        />
-                      </div>
-                      <div>
-                        <label htmlFor="ownerPhone" className="block text-sm font-medium mb-1">Owner Phone *</label>
-                        <Input 
-                          id="ownerPhone"
-                          placeholder="10-digit mobile number" 
-                          {...form.register("ownerPhone", { required: true })} 
-                        />
-                      </div>
-                      <div>
-                        <label htmlFor="ownerWhatsapp" className="block text-sm font-medium mb-1">Owner WhatsApp (if different)</label>
-                        <Input 
-                          id="ownerWhatsapp"
-                          placeholder="WhatsApp number" 
-                          {...form.register("ownerWhatsapp")} 
-                        />
-                      </div>
-                      <div>
-                        <label htmlFor="isOwnerAware" className="block text-sm font-medium mb-1">Is Owner Aware of App? *</label>
-                        <select 
-                          id="isOwnerAware" 
-                          className="w-full p-2 border rounded"
-                          {...form.register("isOwnerAware")}
-                        >
-                          <option value="yes">Yes</option>
-                          <option value="no">No</option>
-                        </select>
-                      </div>
+        <div className="w-full max-w-4xl mx-auto">
+          <Card className="p-2 sm:p-6 rounded-lg shadow-md">
+            <CardHeader className="px-0 pt-0 pb-2 sm:pb-4">
+              <h2 className="text-lg sm:text-xl font-medium">Hostel Information</h2>
+              <p className="text-xs sm:text-sm text-gray-500">
+                Add details on behalf of the hostel owner
+              </p>
+            </CardHeader>
+            <CardContent className="px-0">
+              <Form {...form}>
+                <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4 sm:space-y-6">
+                  {/* Hostel Information */}
+                  <div className="space-y-3 sm:space-y-4">
+                    <div className="mb-2 sm:mb-4">
+                      <label htmlFor="hostelType" className="block text-xs sm:text-sm font-medium mb-1">Hostel Type *</label>
+                      <select 
+                        id="hostelType" 
+                        className="w-full p-2 border rounded text-sm"
+                        {...form.register("hostelType", { required: true })}
+                      >
+                        <option value="">Select Hostel Type</option>
+                        <option value="boys">Boys</option>
+                        <option value="girls">Girls</option>
+                        <option value="coed">Co-ed</option>
+                      </select>
+                    </div>
+                    <div>
+                      <label htmlFor="hostelName" className="block text-xs sm:text-sm font-medium mb-1">Hostel Name *</label>
+                      <Input 
+                        id="hostelName"
+                        placeholder="E.g., Royal Boys Hostel" 
+                        className="w-full text-sm"
+                        {...form.register("hostelName", { required: true })}
+                      />
+                    </div>
+                    <div>
+                      <label htmlFor="tagline" className="block text-xs sm:text-sm font-medium mb-1">Short Tagline / Slogan</label>
+                      <Input id="tagline" placeholder="E.g., Clean Dorms in Andheri West" className="w-full text-sm" {...form.register("tagline")} />
+                    </div>
+                    <div>
+                      <label htmlFor="referenceCode" className="block text-xs sm:text-sm font-medium mb-1">Reference Code</label>
+                      <Input id="referenceCode" value={referenceCode} readOnly className="w-full bg-gray-100 cursor-not-allowed text-sm" />
                     </div>
                   </div>
 
                   {/* Location Section */}
-                  <div className="pt-4 border-t">
-                    <h3 className="font-medium mb-3">Hostel Location</h3>
+                  <div className="pt-3 sm:pt-4 border-t">
+                    <h3 className="font-medium text-base sm:text-lg mb-2 sm:mb-3">Hostel Location</h3>
                     <div>
-                      <label htmlFor="address" className="block text-sm font-medium mb-1">Address *</label>
+                      <label htmlFor="address" className="block text-xs sm:text-sm font-medium mb-1">Address *</label>
                       <Textarea
                         id="address"
                         placeholder="Complete address with building name, street, etc."
                         rows={3}
+                        className="w-full text-sm"
                         {...form.register("address", { required: true })}
                       />
                     </div>
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mt-4">
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4 mt-2">
                       <div>
-                        <label htmlFor="city" className="block text-sm font-medium mb-1">City *</label>
+                        <label htmlFor="city" className="block text-xs sm:text-sm font-medium mb-1">City *</label>
                         <Input 
                           id="city"
                           placeholder="E.g., Mumbai" 
+                          className="w-full text-sm"
                           {...form.register("city", { required: true })} 
                         />
                       </div>
                       <div>
-                        <label htmlFor="state" className="block text-sm font-medium mb-1">State *</label>
+                        <label htmlFor="state" className="block text-xs sm:text-sm font-medium mb-1">State *</label>
                         <Input 
                           id="state"
                           placeholder="E.g., Maharashtra" 
+                          className="w-full text-sm"
                           {...form.register("state", { required: true })} 
                         />
                       </div>
                     </div>
                     {/* Google Maps Location Picker */}
-                    <div className="mt-4">
-                      <label htmlFor="location" className="block text-sm font-medium mb-1">
+                    <div className="mt-3 sm:mt-4">
+                      <label htmlFor="location" className="block text-xs sm:text-sm font-medium mb-1">
                         Hostel Location on Map *
                       </label>
                       <LoadScript googleMapsApiKey={import.meta.env.VITE_GOOGLE_MAPS_API_KEY} libraries={['places']}>
@@ -251,14 +226,12 @@ const AgentAddHostel = () => {
                               const lng = place.geometry.location.lng();
                               setMapCenter({ lat, lng });
                               setMarkerPosition({ lat, lng });
-                              form.setValue('lat', lat);
-                              form.setValue('lng', lng);
-
+                              form.setValue('lat', String(lat));
+                              form.setValue('lng', String(lng));
                               const components = place.address_components || [];
                               const address = place.formatted_address || "";
                               const city = components.find(c => c.types.includes("locality"))?.long_name || "";
                               const state = components.find(c => c.types.includes("administrative_area_level_1"))?.long_name || "";
-
                               form.setValue("address", address);
                               form.setValue("city", city);
                               form.setValue("state", state);
@@ -267,38 +240,40 @@ const AgentAddHostel = () => {
                         >
                           <Input
                             placeholder="Search for hostel location..."
-                            className="mb-2"
+                            className="mb-2 w-full text-sm"
                           />
                         </Autocomplete>
                         <GoogleMap
                           center={mapCenter}
                           zoom={15}
-                          mapContainerStyle={{ width: '100%', height: '256px' }}
+                          mapContainerStyle={{ width: '100%', height: '200px', borderRadius: '8px' }}
                           onClick={(e) => {
                             const lat = e.latLng?.lat() || 0;
                             const lng = e.latLng?.lng() || 0;
                             setMarkerPosition({ lat, lng });
-                            form.setValue('lat', lat);
-                            form.setValue('lng', lng);
+                            form.setValue('lat', String(lat));
+                            form.setValue('lng', String(lng));
                           }}
                         >
                           <Marker position={markerPosition} />
                         </GoogleMap>
                       </LoadScript>
-                      <div className="grid grid-cols-2 gap-4 mt-2">
+                      <div className="grid grid-cols-2 gap-3 mt-2">
                         <div>
-                          <label htmlFor="lat" className="block text-sm font-medium mb-1">Latitude *</label>
+                          <label htmlFor="lat" className="block text-xs sm:text-sm font-medium mb-1">Latitude *</label>
                           <Input 
                             id="lat"
                             placeholder="17.385044"
+                            className="w-full text-sm"
                             {...form.register("lat", { required: true })}
                           />
                         </div>
                         <div>
-                          <label htmlFor="lng" className="block text-sm font-medium mb-1">Longitude *</label>
+                          <label htmlFor="lng" className="block text-xs sm:text-sm font-medium mb-1">Longitude *</label>
                           <Input 
                             id="lng"
                             placeholder="78.486671"
+                            className="w-full text-sm"
                             {...form.register("lng", { required: true })}
                           />
                         </div>
@@ -307,61 +282,31 @@ const AgentAddHostel = () => {
                   </div>
 
                   {/* Agent Notes */}
-                  <div className="pt-4 border-t">
-                    <h3 className="font-medium mb-3">Agent Notes</h3>
+                  <div className="pt-3 sm:pt-4 border-t">
+                    <h3 className="font-medium text-base sm:text-lg mb-2 sm:mb-3">Agent Notes</h3>
                     <div>
-                      <label htmlFor="agentNotes" className="block text-sm font-medium mb-1">Additional Notes</label>
+                      <label htmlFor="agentNotes" className="block text-xs sm:text-sm font-medium mb-1">Additional Notes</label>
                       <Textarea
                         id="agentNotes"
                         placeholder="Any additional information or observations about this hostel"
                         rows={4}
+                        className="w-full text-sm"
                         {...form.register("agentNotes")}
                       />
                     </div>
                   </div>
 
-                  {/* Upload ID Proof */}
-                  {/* Enhancement 2: ID Proof Upload Field */}
-                  <div className="pt-4 border-t">
-                    <h3 className="font-medium mb-3">Owner ID Proof</h3>
-                    <div className="mb-4">
-                      <label htmlFor="idProofFile" className="block text-sm font-medium mb-1">Upload ID Proof *</label>
-                      <input 
-                        type="file"
-                        id="idProofFile"
-                        accept="image/*,.pdf"
-                        className="w-full p-2 border rounded"
-                        {...form.register("idProofFile", { required: true })}
-                      />
-                      <p className="mt-1 text-xs text-gray-500">Upload Aadhaar, Pan Card, or Voter ID (Max: 5MB)</p>
-                    </div>
-                  </div>
-
-                  {/* Enhancement 5: Hostel Registration Proof Upload */}
-                  <div className="pt-4 border-t">
-                    <h3 className="font-medium mb-3">Hostel Registration Proof (Optional)</h3>
-                    <input
-                      type="file"
-                      id="registrationProof"
-                      accept=".pdf,image/*"
-                      className="w-full p-2 border rounded"
-                      {...form.register("registrationProof")}
-                    />
-                    <p className="mt-1 text-xs text-gray-500">PDF or image of hostel registration certificate</p>
-                  </div>
-
                   {/* Hostel Media */}
-                  <div className="pt-4 border-t">
-                    <h3 className="font-medium mb-3">Hostel Media</h3>
-                    <div className="mb-4">
-                      <label htmlFor="hostelImages" className="block text-sm font-medium mb-1">Upload Hostel Images *</label>
-                      {/* Enhancement 4: Hostel Images Validation */}
+                  <div className="pt-3 sm:pt-4 border-t">
+                    <h3 className="font-medium text-base sm:text-lg mb-2 sm:mb-3">Hostel Media</h3>
+                    <div className="mb-2 sm:mb-4">
+                      <label htmlFor="hostelImages" className="block text-xs sm:text-sm font-medium mb-1">Upload Hostel Images *</label>
                       <input
                         type="file"
                         id="hostelImages"
                         accept="image/png, image/jpeg"
                         multiple
-                        className="w-full p-2 border rounded"
+                        className="w-full p-2 border rounded text-sm"
                         {...form.register("hostelImages", {
                           validate: (files: FileList) => {
                             for (let i = 0; i < files.length; i++) {
@@ -373,22 +318,23 @@ const AgentAddHostel = () => {
                         })}
                       />
                       <p className="mt-1 text-xs text-gray-500">You can upload multiple images (JPG, PNG).</p>
-                      {/* Enhancement 6: Image Preview of Uploaded Images */}
                       {form.watch("hostelImages") && Array.from(form.watch("hostelImages")).map((file: File, index: number) => (
-                        <img key={index} src={URL.createObjectURL(file)} alt="Preview" className="w-24 h-24 object-cover inline-block mr-2 mt-2 rounded" />
+                        <img key={index} src={URL.createObjectURL(file)} alt="Preview" className="w-20 h-20 object-cover inline-block mr-2 mt-2 rounded" />
                       ))}
                     </div>
-                    <div className="mb-4">
-                      <label className="block text-sm font-medium mb-1">Video Links (Optional)</label>
+                    <div className="mb-2 sm:mb-4">
+                      <label className="block text-xs sm:text-sm font-medium mb-1">Video Links (Optional)</label>
                       {form.watch("videoUrls")?.map((_: string, index: number) => (
                         <div key={index} className="flex gap-2 mb-2">
                           <Input
                             placeholder={`https://youtu.be/video${index + 1}`}
+                            className="w-full text-sm"
                             {...form.register(`videoUrls.${index}` as const)}
                           />
                           <Button
                             type="button"
                             variant="ghost"
+                            className="text-xs"
                             onClick={() => {
                               const current = form.getValues("videoUrls") || [];
                               form.setValue("videoUrls", current.filter((_, i) => i !== index));
@@ -401,6 +347,7 @@ const AgentAddHostel = () => {
                       <Button
                         type="button"
                         variant="outline"
+                        className="text-xs"
                         onClick={() => {
                           const current = form.getValues("videoUrls") || [];
                           form.setValue("videoUrls", [...current, ""]);
@@ -411,25 +358,84 @@ const AgentAddHostel = () => {
                     </div>
                   </div>
 
-                </div>
+                  {/* New Fields: On-Site Manager, Contacts, Website */}
+                  <div className="space-y-2 sm:space-y-3">
+                    <div>
+                      <label htmlFor="onSiteManager" className="block text-xs sm:text-sm font-medium mb-1">On-Site Manager</label>
+                      <Input id="onSiteManager" placeholder="Name of on-site manager (if different from owner)" className="w-full text-sm" {...form.register("onSiteManager")} />
+                    </div>
+                    <div>
+                      <label htmlFor="primaryPhone" className="block text-xs sm:text-sm font-medium mb-1">Primary Phone *</label>
+                      <Input id="primaryPhone" placeholder="Owner or manager's phone number" className="w-full text-sm" {...form.register("primaryPhone", { required: true })} />
+                    </div>
+                    <div>
+                      <label htmlFor="primaryEmail" className="block text-xs sm:text-sm font-medium mb-1">Primary Email *</label>
+                      <Input id="primaryEmail" type="email" placeholder="Owner or manager's email address" className="w-full text-sm" {...form.register("primaryEmail", { required: true })} />
+                    </div>
+                    <div>
+                      <label htmlFor="website" className="block text-xs sm:text-sm font-medium mb-1">Website / Social Media URL</label>
+                      <Input id="website" placeholder="https://instagram.com/yourhostel or website URL" className="w-full text-sm" {...form.register("website")} />
+                    </div>
+                  </div>
 
-                <div className="flex flex-col sm:flex-row gap-4 pt-4 border-t">
-                  <Button
-                    type="button"
-                    variant="outline"
-                    className="flex-1"
-                    onClick={() => navigate("/agent/dashboard")}
-                  >
-                    Cancel
-                  </Button>
-                  <Button type="submit" className="flex-1">
-                    Submit for Review
-                  </Button>
-                </div>
-              </form>
-            </Form>
-          </CardContent>
-        </Card>
+                  <div className="flex flex-col sm:flex-row gap-3 sm:gap-4 pt-4 border-t">
+                    <Button
+                      type="button"
+                      variant="outline"
+                      className="w-full sm:w-auto"
+                      onClick={() => navigate("/agent/dashboard")}
+                    >
+                      Cancel
+                    </Button>
+                    <Button type="submit" className="w-full sm:w-auto">
+                      Submit for Review
+                    </Button>
+                  </div>
+                </form>
+              </Form>
+            </CardContent>
+          </Card>
+        </div>
+
+        {/* QR Code Dialog */}
+        <Dialog open={showQrDialog} onOpenChange={setShowQrDialog}>
+          <DialogContent className="max-w-md">
+            <DialogHeader>
+              <DialogTitle>Hostel Created Successfully</DialogTitle>
+            </DialogHeader>
+            <div className="py-4">
+              <p className="text-sm text-gray-500 mb-4">
+                The hostel has been added successfully. You can share the QR code below for quick access.
+              </p>
+              <div className="flex justify-center mb-4">
+                {createdHostelUrl && <QRCodeCanvas value={createdHostelUrl} size={128} />}
+              </div>
+              <p className="text-center text-sm text-gray-500">
+                {createdHostelUrl}
+              </p>
+              <div className="flex justify-center mt-4 gap-2">
+                <Button
+                  variant="outline"
+                  onClick={() => {
+                    const canvas = document.querySelector('canvas');
+                    if (canvas) {
+                      const url = canvas.toDataURL('image/png');
+                      const a = document.createElement('a');
+                      a.href = url;
+                      a.download = 'hostel-qr.png';
+                      a.click();
+                    }
+                  }}
+                >
+                  Download QR Code
+                </Button>
+                <Button onClick={() => { setShowQrDialog(false); navigate("/agent/my-hostels"); }}>
+                  Done
+                </Button>
+              </div>
+            </div>
+          </DialogContent>
+        </Dialog>
       </div>
     </AgentLayout>
   );
