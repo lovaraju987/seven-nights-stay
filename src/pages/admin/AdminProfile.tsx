@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useEffect, useState } from "react";
 import AdminLayout from "@/components/admin/AdminLayout";
 import { Card, CardHeader, CardTitle, CardContent, CardFooter } from "@/components/ui/card";
 import { Label } from "@/components/ui/label";
@@ -7,22 +7,79 @@ import { Button } from "@/components/ui/button";
 import { Avatar } from "@/components/ui/avatar";
 import { Camera } from "lucide-react";
 import { toast } from "@/components/ui/sonner";
+import { supabase } from "@/lib/supabase";
+import { useNavigate } from "react-router-dom";
 
 const AdminProfile = () => {
-  const [profile, setProfile] = useState({
-    name: "Admin User",
-    email: "admin@example.com",
-    phone: "",
-    address: "",
-  });
+  const navigate = useNavigate();
+  const [profile, setProfile] = useState<any>(null);
+  const [loading, setLoading] = useState(false);
+
+  useEffect(() => {
+    const fetchProfile = async () => {
+      setLoading(true);
+      const { data: authData, error: authError } = await supabase.auth.getUser();
+      if (authError || !authData?.user) {
+        toast.error("Could not fetch user. Please login again.");
+        setLoading(false);
+        navigate("/admin/login");
+        return;
+      }
+
+      const userId = authData.user.id;
+      const { data, error } = await supabase
+        .from("profiles")
+        .select("*")
+        .eq("id", userId)
+        .single();
+      if (error) {
+        toast.error("Could not fetch profile");
+      } else {
+        setProfile(data);
+      }
+      setLoading(false);
+    };
+    fetchProfile();
+  }, []);
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const { name, value } = e.target;
-    setProfile((prev) => ({ ...prev, [name]: value }));
+    setProfile((prev: any) => ({ ...prev, [name]: value }));
   };
 
-  const handleSave = () => {
-    toast.success("Profile updated successfully");
+  const handleSave = async () => {
+    if (!profile) return;
+    setLoading(true);
+    const { data: authData } = await supabase.auth.getUser();
+    const userId = authData?.user?.id;
+    if (!userId) {
+      setLoading(false);
+      toast.error("Not logged in");
+      return;
+    }
+
+    const updateFields: any = {
+      name: profile.name,
+      email: profile.email,
+      phone: profile.phone,
+      address: profile.address,
+    };
+
+    const { error } = await supabase.from("profiles").update(updateFields).eq("id", userId);
+    if (error) {
+      toast.error("Failed to update profile");
+    } else {
+      toast.success("Profile updated successfully");
+    }
+
+    if (profile.email) {
+      const { error: emailError } = await supabase.auth.updateUser({ email: profile.email });
+      if (emailError) {
+        toast.error("Failed to update email: " + emailError.message);
+      }
+    }
+
+    setLoading(false);
   };
 
   const handleImageUpload = () => {
@@ -48,24 +105,51 @@ const AdminProfile = () => {
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div>
                 <Label htmlFor="name">Name</Label>
-                <Input id="name" name="name" value={profile.name} onChange={handleChange} />
+                <Input
+                  id="name"
+                  name="name"
+                  value={profile?.name || ""}
+                  onChange={handleChange}
+                  disabled={loading || !profile}
+                />
               </div>
               <div>
                 <Label htmlFor="email">Email</Label>
-                <Input id="email" name="email" type="email" value={profile.email} onChange={handleChange} />
+                <Input
+                  id="email"
+                  name="email"
+                  type="email"
+                  value={profile?.email || ""}
+                  onChange={handleChange}
+                  disabled={loading || !profile}
+                />
               </div>
               <div>
                 <Label htmlFor="phone">Phone</Label>
-                <Input id="phone" name="phone" value={profile.phone} onChange={handleChange} />
+                <Input
+                  id="phone"
+                  name="phone"
+                  value={profile?.phone || ""}
+                  onChange={handleChange}
+                  disabled={loading || !profile}
+                />
               </div>
               <div>
                 <Label htmlFor="address">Address</Label>
-                <Input id="address" name="address" value={profile.address} onChange={handleChange} />
+                <Input
+                  id="address"
+                  name="address"
+                  value={profile?.address || ""}
+                  onChange={handleChange}
+                  disabled={loading || !profile}
+                />
               </div>
             </div>
           </CardContent>
           <CardFooter className="justify-end">
-            <Button onClick={handleSave}>Save Changes</Button>
+            <Button onClick={handleSave} disabled={loading || !profile}>
+              Save Changes
+            </Button>
           </CardFooter>
         </Card>
       </div>
