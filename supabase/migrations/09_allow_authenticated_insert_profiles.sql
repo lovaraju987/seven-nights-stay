@@ -1,0 +1,5 @@
+-- Remove or comment out the following block to avoid duplicate policy creation:
+-- create policy "Allow authenticated insert"
+-- on profiles
+-- for insert
+-- with check (auth.role() = 'authenticated');

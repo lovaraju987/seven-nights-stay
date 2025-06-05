@@ -63,16 +63,29 @@ const AdminAddHostel = () => {
   const [selectedAgentId, setSelectedAgentId] = useState<string>("");
   const [showQrDialog, setShowQrDialog] = useState(false);
   const [createdHostelUrl, setCreatedHostelUrl] = useState("");
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
   // Fetch owners and agents on mount
+  const fetchOwners = async () => {
+    // Fetch all owners
+    const { data: ownersData, error: ownersError } = await supabase
+      .from("owners")
+      .select("id, user_id, name, email, phone, status")
+      .order("name", { ascending: true });
+    // Fetch all profiles
+    const { data: profilesData, error: profilesError } = await supabase
+      .from("profiles")
+      .select("id");
+    if (!ownersError && ownersData && !profilesError && profilesData) {
+      const profileIds = new Set(profilesData.map(profile => profile.id));
+      const validOwners = ownersData.filter(owner => profileIds.has(owner.user_id));
+      setOwners(validOwners);
+    } else {
+      setOwners([]); // Ensure owners is always an array
+    }
+  };
   React.useEffect(() => {
-    const fetchOwners = async () => {
-      const { data, error } = await supabase
-        .from("owners")
-        .select("id, user_id, name, email, phone, status");
-      if (!error && data) setOwners(data);
-      else setOwners([]); // Ensure owners is always an array
-    };
+    fetchOwners();
     const fetchAgents = async () => {
       const { data, error } = await supabase
         .from("profiles")
@@ -81,31 +94,40 @@ const AdminAddHostel = () => {
       if (!error && data) setAgents(data);
       else setAgents([]);
     };
-    fetchOwners();
     fetchAgents();
   }, [showAddOwnerDialog]); // Refetch when dialog closes in case a new owner was added
 
   const handleCreateOwner = async () => {
     setCreatingOwner(true);
     try {
+      // 0. Trim and validate email
+      const trimmedEmail = newOwner.email.trim();
+      const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+      if (!emailRegex.test(trimmedEmail)) {
+        toast.error("Please enter a valid email address.");
+        setCreatingOwner(false);
+        return;
+      }
+      // 0.5. Check for duplicate owner email
+      const { data: existingOwner, error: ownerCheckError } = await supabase
+        .from("owners")
+        .select("id")
+        .eq("email", trimmedEmail)
+        .maybeSingle();
+      if (existingOwner) {
+        toast.error("This email is already registered as an owner. Please use a different email.");
+        setCreatingOwner(false);
+        return;
+      }
       // 1. Create user in Supabase Auth
       const { data, error: signUpError } = await supabase.auth.signUp({
-        email: newOwner.email,
+        email: trimmedEmail,
         password: newOwner.password,
         options: { data: { name: newOwner.name, phone: newOwner.phone, role: "owner" } }
       });
       if (signUpError || !data.user) {
         console.error("Supabase signUp error:", signUpError);
-        // Friendly error messages for common cases
-        if (signUpError?.message?.toLowerCase().includes("user already registered") || signUpError?.message?.toLowerCase().includes("user already exists")) {
-          toast.error("This email is already registered. Please use a different email.");
-        } else if (signUpError?.message?.toLowerCase().includes("invalid email")) {
-          toast.error("Please enter a valid email address.");
-        } else if (signUpError?.message?.toLowerCase().includes("password")) {
-          toast.error("Password is too weak. Please use a stronger password.");
-        } else {
-          toast.error(signUpError?.message || "Failed to create owner. The email may already be registered or there is a network issue.");
-        }
+        toast.error(signUpError?.message || "Failed to create owner. The email may already be registered or there is a network issue.");
         setCreatingOwner(false);
         return;
       }
@@ -113,7 +135,7 @@ const AdminAddHostel = () => {
       const { data: ownerInsert, error: ownerInsertError } = await supabase.from("owners").insert({
         user_id: data.user.id,
         name: newOwner.name,
-        email: newOwner.email,
+        email: trimmedEmail,
         phone: newOwner.phone,
         status: "active"
       }).select().single();
@@ -123,15 +145,21 @@ const AdminAddHostel = () => {
         setCreatingOwner(false);
         return;
       }
-      // 3. Refresh owners list and select new owner
-      const { data: ownersList, error: fetchOwnersError } = await supabase
-        .from("owners")
-        .select("id, user_id, name, email, phone, status");
-      if (fetchOwnersError) {
-        console.error("Supabase fetch owners error:", fetchOwnersError);
-        toast.error("Owner created but failed to refresh owner list.");
+      // 2.5. Insert into profiles table if not exists
+      // NOTE: If you see a row-level security error here, update your Supabase RLS policy for the profiles table to allow admin inserts.
+      const { error: profileInsertError } = await supabase.from("profiles").upsert({
+        id: data.user.id,
+        name: newOwner.name,
+        email: trimmedEmail,
+        phone: newOwner.phone,
+        role: "owner"
+      }, { onConflict: "id" });
+      if (profileInsertError) {
+        console.error("Supabase profiles insert error:", profileInsertError);
+        toast.error("Owner created but failed to create profile record. (Check RLS policy)");
       }
-      setOwners(ownersList || []);
+      // 3. Refresh owners list and select new owner
+      fetchOwners();
       setSelectedOwnerId(ownerInsert.id);
       setShowAddOwnerDialog(false);
       setNewOwner({ name: "", email: "", phone: "", password: "" });
@@ -145,68 +173,78 @@ const AdminAddHostel = () => {
   };
 
   const onSubmit = async (data) => {
-    // Admin can add hostels as owner, but set created_by: 'admin'
-    // Use selectedOwnerId from owners table
-    const uploadedImageUrls = [];
-    if (data.hostelImages && data.hostelImages.length > 0) {
-      for (const file of Array.from(data.hostelImages as FileList)) {
-        if (!(file instanceof File)) continue;
-        const sanitizedFileName = file.name.toLowerCase().replace(/\s+/g, "-").replace(/[^\w.-]+/g, "");
-        const filePath = `admin/${Date.now()}-${sanitizedFileName}`;
-        const { error: uploadError } = await supabase.storage
-          .from("hostel-images")
-          .upload(filePath, file);
-        if (uploadError) {
-          toast.error("Image upload failed.");
-          return;
+    setIsSubmitting(true);
+    try {
+      const uploadedImageUrls = [];
+      if (data.hostelImages && data.hostelImages.length > 0) {
+        for (const file of Array.from(data.hostelImages as FileList)) {
+          if (!(file instanceof File)) continue;
+          const sanitizedFileName = file.name.toLowerCase().replace(/\s+/g, "-").replace(/[^\w.-]+/g, "");
+          const filePath = `admin/${Date.now()}-${sanitizedFileName}`;
+          const { error: uploadError } = await supabase.storage
+            .from("hostel-images")
+            .upload(filePath, file);
+          if (uploadError) {
+            console.error("Supabase image upload error:", uploadError);
+            console.error("Upload error details:", JSON.stringify(uploadError, null, 2));
+            console.error("File info:", file);
+            console.error("File path:", filePath);
+            toast.error("Image upload failed. Check console for details.");
+            setIsSubmitting(false); // <-- allow retry
+            return;
+          }
+          const { data: publicUrlData } = supabase.storage
+            .from("hostel-images")
+            .getPublicUrl(filePath);
+          const publicUrl = publicUrlData?.publicUrl;
+          uploadedImageUrls.push(publicUrl);
         }
-        const { data: publicUrlData } = supabase.storage
-          .from("hostel-images")
-          .getPublicUrl(filePath);
-        const publicUrl = publicUrlData?.publicUrl;
-        uploadedImageUrls.push(publicUrl);
       }
-    }
-    const { data: insertResult, error } = await supabase.from("hostels").insert([
-      {
-        name: data.hostelName,
-        type: data.hostelType,
-        tagline: data.tagline,
-        reference_code: referenceCode,
-        description: data.agentNotes || "",
-        address: {
-          address: data.address,
-          city: data.city,
-          state: data.state
-        },
-        lat: data.lat,
-        lng: data.lng,
-        status: "verified",
-        images: uploadedImageUrls,
-        video_urls: data.videoUrls?.filter(Boolean) || [],
-        updated_at: new Date().toISOString(),
-        created_by: "admin",
-        owner_id: selectedOwnerId,
-        agent_id: selectedAgentId || null,
-        on_site_manager: data.onSiteManager,
-        primary_phone: data.primaryPhone,
-        primary_email: data.primaryEmail,
-        website: data.website,
-        // Remove pricing/availability fields from here if not needed
+      const { data: insertResult, error } = await supabase.from("hostels").insert([
+        {
+          name: data.hostelName,
+          type: data.hostelType,
+          tagline: data.tagline,
+          reference_code: referenceCode,
+          description: data.agentNotes || "",
+          address: {
+            address: data.address,
+            city: data.city,
+            state: data.state
+          },
+          lat: data.lat,
+          lng: data.lng,
+          status: "verified",
+          images: uploadedImageUrls,
+          video_urls: data.videoUrls?.filter(Boolean) || [],
+          updated_at: new Date().toISOString(),
+          created_by: "admin",
+          owner_id: selectedOwnerId,
+          agent_id: selectedAgentId || null,
+          on_site_manager: data.onSiteManager,
+          primary_phone: data.primaryPhone,
+          primary_email: data.primaryEmail,
+          website: data.website,
+        }
+      ]).select().single();
+      if (error) {
+        console.error("Supabase insert error:", error);
+        console.error("Insert error details:", JSON.stringify(error, null, 2));
+        toast.error("Failed to submit hostel. Check console for details.");
+        setIsSubmitting(false); // <-- allow retry
+        return;
       }
-    ]).select().single();
-    if (error) {
-      toast.error("Failed to submit hostel");
-      return;
+      // Generate public URL for QR code
+      const hostelId = insertResult?.id;
+      const publicUrl = `${window.location.origin}/hostel/${hostelId}`;
+      setCreatedHostelUrl(publicUrl);
+      setShowQrDialog(true);
+      toast.success("Hostel added successfully!");
+      setIsSubmitting(false);
+    } catch (err) {
+      setIsSubmitting(false); // <-- allow retry on unexpected error
+      throw err;
     }
-    // Generate public URL for QR code
-    const hostelId = insertResult?.id;
-    const publicUrl = `${window.location.origin}/hostel/${hostelId}`;
-    setCreatedHostelUrl(publicUrl);
-    setShowQrDialog(true);
-    toast.success("Hostel added successfully!");
-    // Optionally, navigate after closing QR dialog
-    // navigate("/admin/hostels");
   };
 
   return (
@@ -447,7 +485,7 @@ const AdminAddHostel = () => {
                   <div className="mb-4">
                     <label className="block text-sm font-medium mb-1">Hostel Owner *</label>
                     <div className="flex gap-2">
-                      <Select value={selectedOwnerId} onValueChange={setSelectedOwnerId}>
+                      <Select value={selectedOwnerId || ""} onValueChange={setSelectedOwnerId}>
                         <SelectTrigger className="w-full">
                           <SelectValue placeholder={owners.length === 0 ? "No owners found. Add one." : "Select owner"} />
                         </SelectTrigger>
@@ -456,7 +494,7 @@ const AdminAddHostel = () => {
                             <div className="px-4 py-2 text-gray-500">No owners found</div>
                           ) : (
                             owners.map((owner) => (
-                              <SelectItem key={owner.id} value={owner.id}>
+                              <SelectItem key={owner.id} value={String(owner.id)}>
                                 {owner.name} ({owner.email})
                               </SelectItem>
                             ))
@@ -537,8 +575,9 @@ const AdminAddHostel = () => {
                   <Button 
                     type="submit" 
                     className="w-full md:w-auto"
+                    disabled={isSubmitting} // <-- disable only while submitting
                   >
-                    Add Hostel
+                    {isSubmitting ? "Submitting..." : "Add Hostel"}
                   </Button>
                 </div>
               </form>

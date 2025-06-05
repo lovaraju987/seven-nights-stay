@@ -72,7 +72,11 @@ const AgentAddHostel = () => {
           .from("hostel-images")
           .upload(filePath, file);
         if (uploadError) {
-          toast.error("Image upload failed.");
+          console.error("Supabase image upload error:", uploadError);
+          console.error("Upload error details:", JSON.stringify(uploadError, null, 2));
+          console.error("File info:", file);
+          console.error("File path:", filePath);
+          toast.error("Image upload failed. Check console for details.");
           return;
         }
         const { data: publicUrlData } = supabase.storage
