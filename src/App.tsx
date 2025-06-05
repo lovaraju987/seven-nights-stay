@@ -42,6 +42,8 @@ import ComplaintManagement from "./pages/admin/ComplaintManagement";
 import SubscriptionPlans from "./pages/admin/SubscriptionPlans";
 import Notifications from "@/pages/admin/Notifications";
 import AdminProfile from "./pages/admin/AdminProfile";
+import OwnerManagement from "./pages/admin/OwnerManagement";
+import BookingManagement from "./pages/admin/BookingManagement";
 
 // Agent Routes
 import AgentLogin from "./pages/agent/AgentLogin";
@@ -225,6 +227,22 @@ const App = () => (
             element={
               <ProtectedRoute role="admin">
                 <UserManagement />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/admin/owners"
+            element={
+              <ProtectedRoute role="admin">
+                <OwnerManagement />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/admin/bookings"
+            element={
+              <ProtectedRoute role="admin">
+                <BookingManagement />
               </ProtectedRoute>
             }
           />
