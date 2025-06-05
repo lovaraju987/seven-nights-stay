@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import AdminLayout from "@/components/admin/AdminLayout";
 import { Button } from "@/components/ui/button";
@@ -24,6 +24,31 @@ import {
 import { toast } from "@/components/ui/sonner";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogDescription } from "@/components/ui/dialog";
 import { supabase } from "@/lib/supabase";
+
+function useMediaQuery(query: string): boolean {
+  const [matches, setMatches] = useState(() => {
+    if (typeof window !== "undefined" && window.matchMedia) {
+      return window.matchMedia(query).matches;
+    }
+    return false;
+  });
+
+  useEffect(() => {
+    if (typeof window === "undefined" || !window.matchMedia) return;
+
+    const mediaQueryList = window.matchMedia(query);
+    const listener = (event: MediaQueryListEvent) => setMatches(event.matches);
+
+    mediaQueryList.addEventListener("change", listener);
+    setMatches(mediaQueryList.matches);
+
+    return () => {
+      mediaQueryList.removeEventListener("change", listener);
+    };
+  }, [query]);
+
+  return matches;
+}
 
 const HostelManagement = () => {
   const navigate = useNavigate();
@@ -104,167 +129,233 @@ const HostelManagement = () => {
     setShowHostelDialog(true);
   };
 
+  const isMobile = useMediaQuery("(max-width: 640px)");
+
   return (
     <AdminLayout>
-      <div className="p-6 space-y-6">
-        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
-          <h1 className="text-2xl font-bold">Hostel Management</h1>
-          <div className="relative w-full sm:w-64">
-            <Search className="absolute left-2 top-2.5 h-4 w-4 text-muted-foreground" />
-            <Input
-              placeholder="Search hostels..."
-              className="pl-8"
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-            />
+      <div className="p-4 space-y-4">
+        <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+          <h1 className="text-xl font-bold">Hostel Management</h1>
+          <div className="flex flex-col sm:flex-row gap-2 w-full sm:w-auto">
+            <Button
+              variant="outline"
+              className="mb-2 sm:mb-0"
+              onClick={() => navigate("/admin/add-hostel")}
+            >
+              + Add Hostel
+            </Button>
+            <div className="relative w-full sm:w-64">
+              <Search className="absolute left-2 top-2.5 h-4 w-4 text-muted-foreground" />
+              <Input
+                placeholder="Search hostels..."
+                className="pl-8"
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+              />
+            </div>
           </div>
         </div>
 
         <Tabs defaultValue="pending" className="w-full">
-          <TabsList className="w-full sm:w-auto">
-            <TabsTrigger value="pending" className="flex-1 sm:flex-initial">
-              Pending Verification
-              <Badge variant="secondary" className="ml-2">
-                {filteredPendingHostels.length}
-              </Badge>
+          <TabsList className="flex flex-col sm:flex-row gap-2">
+            <TabsTrigger value="pending">
+              Pending
+              <Badge variant="secondary" className="ml-2">{filteredPendingHostels.length}</Badge>
             </TabsTrigger>
-            <TabsTrigger value="verified" className="flex-1 sm:flex-initial">
-              Verified Hostels
-              <Badge variant="secondary" className="ml-2">
-                {filteredVerifiedHostels.length}
-              </Badge>
+            <TabsTrigger value="verified">
+              Verified
+              <Badge variant="secondary" className="ml-2">{filteredVerifiedHostels.length}</Badge>
             </TabsTrigger>
           </TabsList>
 
+          {/* Pending Hostels */}
           <TabsContent value="pending">
-            <div className="rounded-md border">
-              <Table>
-                <TableHeader>
-                  <TableRow>
-                    <TableHead>Hostel Name</TableHead>
-                    <TableHead>Owner</TableHead>
-                    <TableHead>Type</TableHead>
-                    <TableHead>Location</TableHead>
-                    <TableHead>Submitted On</TableHead>
-                    <TableHead>Actions</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {filteredPendingHostels.length > 0 ? (
-                    filteredPendingHostels.map((hostel) => (
-                      <TableRow key={hostel.id}>
-                        <TableCell className="font-medium">{hostel.name}</TableCell>
-                        <TableCell>{hostel.profiles?.name || "Unknown"}</TableCell>
-                        <TableCell>
-                          <Badge variant="outline">{hostel.type}</Badge>
-                        </TableCell>
-                        <TableCell>{hostel.location}</TableCell>
-                        <TableCell>
-                          {/* Show submittedOn as created_at */}
-                          {hostel.created_at ? new Date(hostel.created_at).toLocaleDateString() : "-"}
-                        </TableCell>
-                        <TableCell>
-                          <div className="flex space-x-2">
-                            <Button
-                              variant="ghost"
-                              size="icon"
-                              onClick={() => openHostelDialog(hostel, "view")}
-                            >
-                              <Eye className="h-4 w-4" />
-                            </Button>
-                            <Button
-                              variant="ghost"
-                              size="icon"
-                              className="text-green-600"
-                              onClick={() => openHostelDialog(hostel, "verify")}
-                            >
-                              <CheckCircle className="h-4 w-4" />
-                            </Button>
-                            <Button
-                              variant="ghost"
-                              size="icon"
-                              className="text-red-600"
-                              onClick={() => openHostelDialog(hostel, "reject")}
-                            >
-                              <XCircle className="h-4 w-4" />
-                            </Button>
-                          </div>
+            {isMobile ? (
+              <div className="space-y-4">
+                {filteredPendingHostels.length > 0 ? filteredPendingHostels.map((hostel) => (
+                  <div
+                    key={hostel.id}
+                    className="rounded-xl border bg-white shadow-md p-4 flex flex-col gap-3"
+                  >
+                    <div className="flex items-center justify-between mb-2">
+                      <div className="flex-1 min-w-0">
+                        <div className="font-bold text-base truncate text-gray-900">{hostel.name}</div>
+                        <div className="text-xs text-gray-500 truncate">{hostel.location}</div>
+                      </div>
+                      <Badge variant="outline" className="ml-2 whitespace-nowrap">{hostel.type}</Badge>
+                    </div>
+                    <div className="text-xs text-gray-600 mb-1">
+                      <span className="font-medium">Owner:</span> {hostel.profiles?.name || "Unknown"}
+                    </div>
+                    <div className="flex flex-wrap gap-2 mt-2">
+                      <Button size="sm" variant="outline" className="flex-1 min-w-[90px]" onClick={() => openHostelDialog(hostel, "view")}>View</Button>
+                      <Button size="sm" variant="outline" className="flex-1 min-w-[90px] text-green-700 border-green-200" onClick={() => openHostelDialog(hostel, "verify")}>Approve</Button>
+                      <Button size="sm" variant="outline" className="flex-1 min-w-[90px] text-red-700 border-red-200" onClick={() => openHostelDialog(hostel, "reject")}>Reject</Button>
+                    </div>
+                  </div>
+                )) : (
+                  <div className="text-center text-gray-500 py-8">No pending hostels found</div>
+                )}
+              </div>
+            ) : (
+              <div className="rounded-md border">
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead>Hostel Name</TableHead>
+                      <TableHead>Owner</TableHead>
+                      <TableHead>Type</TableHead>
+                      <TableHead>Location</TableHead>
+                      <TableHead>Submitted On</TableHead>
+                      <TableHead>Actions</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {filteredPendingHostels.length > 0 ? (
+                      filteredPendingHostels.map((hostel) => (
+                        <TableRow key={hostel.id}>
+                          <TableCell className="font-medium">{hostel.name}</TableCell>
+                          <TableCell>{hostel.profiles?.name || "Unknown"}</TableCell>
+                          <TableCell>
+                            <Badge variant="outline">{hostel.type}</Badge>
+                          </TableCell>
+                          <TableCell>{hostel.location}</TableCell>
+                          <TableCell>
+                            {/* Show submittedOn as created_at */}
+                            {hostel.created_at ? new Date(hostel.created_at).toLocaleDateString() : "-"}
+                          </TableCell>
+                          <TableCell>
+                            <div className="flex space-x-2">
+                              <Button
+                                variant="ghost"
+                                size="icon"
+                                onClick={() => openHostelDialog(hostel, "view")}
+                              >
+                                <Eye className="h-4 w-4" />
+                              </Button>
+                              <Button
+                                variant="ghost"
+                                size="icon"
+                                className="text-green-600"
+                                onClick={() => openHostelDialog(hostel, "verify")}
+                              >
+                                <CheckCircle className="h-4 w-4" />
+                              </Button>
+                              <Button
+                                variant="ghost"
+                                size="icon"
+                                className="text-red-600"
+                                onClick={() => openHostelDialog(hostel, "reject")}
+                              >
+                                <XCircle className="h-4 w-4" />
+                              </Button>
+                            </div>
+                          </TableCell>
+                        </TableRow>
+                      ))
+                    ) : (
+                      <TableRow>
+                        <TableCell colSpan={6} className="text-center h-24">
+                          No pending hostels found
                         </TableCell>
                       </TableRow>
-                    ))
-                  ) : (
-                    <TableRow>
-                      <TableCell colSpan={6} className="text-center h-24">
-                        No pending hostels found
-                      </TableCell>
-                    </TableRow>
-                  )}
-                </TableBody>
-              </Table>
-            </div>
+                    )}
+                  </TableBody>
+                </Table>
+              </div>
+            )}
           </TabsContent>
 
+          {/* Verified Hostels */}
           <TabsContent value="verified">
-            <div className="rounded-md border">
-              <Table>
-                <TableHeader>
-                  <TableRow>
-                    <TableHead>Hostel Name</TableHead>
-                    <TableHead>Owner</TableHead>
-                    <TableHead>Type</TableHead>
-                    <TableHead>Location</TableHead>
-                    <TableHead>Status</TableHead>
-                    <TableHead>Actions</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {filteredVerifiedHostels.length > 0 ? (
-                    filteredVerifiedHostels.map((hostel) => (
-                      <TableRow key={hostel.id}>
-                        <TableCell className="font-medium">{hostel.name}</TableCell>
-                        <TableCell>{hostel.profiles?.name || "Unknown"}</TableCell>
-                        <TableCell>
-                          <Badge variant="outline">{hostel.type}</Badge>
-                        </TableCell>
-                        <TableCell>{hostel.location}</TableCell>
-                        <TableCell>
-                          <Badge
-                            variant={hostel.status === "verified" ? "success" : "destructive"}
-                          >
-                            {hostel.status === "verified" ? "Verified" : "Rejected"}
-                          </Badge>
-                        </TableCell>
-                        <TableCell>
-                          <div className="flex space-x-2">
-                            <Button
-                              variant="ghost"
-                              size="icon"
-                              onClick={() => openHostelDialog(hostel, "view")}
+            {isMobile ? (
+              <div className="space-y-4">
+                {filteredVerifiedHostels.length > 0 ? filteredVerifiedHostels.map((hostel) => (
+                  <div
+                    key={hostel.id}
+                    className="rounded-xl border bg-white shadow-md p-4 flex flex-col gap-3"
+                  >
+                    <div className="flex items-center justify-between mb-2">
+                      <div className="flex-1 min-w-0">
+                        <div className="font-bold text-base truncate text-gray-900">{hostel.name}</div>
+                        <div className="text-xs text-gray-500 truncate">{hostel.location}</div>
+                      </div>
+                      <Badge variant="outline" className="ml-2 whitespace-nowrap">{hostel.type}</Badge>
+                    </div>
+                    <div className="text-xs text-gray-600 mb-1">
+                      <span className="font-medium">Owner:</span> {hostel.profiles?.name || "Unknown"}
+                    </div>
+                    <div className="flex flex-wrap gap-2 mt-2">
+                      <Button size="sm" variant="outline" className="flex-1 min-w-[90px]" onClick={() => openHostelDialog(hostel, "view")}>View</Button>
+                      <Button size="sm" variant="outline" className="flex-1 min-w-[90px] text-blue-700 border-blue-200" onClick={() => navigate(`/admin/hostel/${hostel.id}`)}>Edit</Button>
+                    </div>
+                  </div>
+                )) : (
+                  <div className="text-center text-gray-500 py-8">No verified hostels found</div>
+                )}
+              </div>
+            ) : (
+              <div className="rounded-md border">
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead>Hostel Name</TableHead>
+                      <TableHead>Owner</TableHead>
+                      <TableHead>Type</TableHead>
+                      <TableHead>Location</TableHead>
+                      <TableHead>Status</TableHead>
+                      <TableHead>Actions</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {filteredVerifiedHostels.length > 0 ? (
+                      filteredVerifiedHostels.map((hostel) => (
+                        <TableRow key={hostel.id}>
+                          <TableCell className="font-medium">{hostel.name}</TableCell>
+                          <TableCell>{hostel.profiles?.name || "Unknown"}</TableCell>
+                          <TableCell>
+                            <Badge variant="outline">{hostel.type}</Badge>
+                          </TableCell>
+                          <TableCell>{hostel.location}</TableCell>
+                          <TableCell>
+                            <Badge
+                              variant={hostel.status === "verified" ? "success" : "destructive"}
                             >
-                              <Eye className="h-4 w-4" />
-                            </Button>
-                            <Button
-                              variant="ghost"
-                              size="icon"
-                              className="text-blue-600"
-                              onClick={() => navigate(`/admin/hostel/${hostel.id}`)}
-                            >
-                              <Edit className="h-4 w-4" />
-                            </Button>
-                          </div>
+                              {hostel.status === "verified" ? "Verified" : "Rejected"}
+                            </Badge>
+                          </TableCell>
+                          <TableCell>
+                            <div className="flex space-x-2">
+                              <Button
+                                variant="ghost"
+                                size="icon"
+                                onClick={() => openHostelDialog(hostel, "view")}
+                              >
+                                <Eye className="h-4 w-4" />
+                              </Button>
+                              <Button
+                                variant="ghost"
+                                size="icon"
+                                className="text-blue-600"
+                                onClick={() => navigate(`/admin/hostel/${hostel.id}`)}
+                              >
+                                <Edit className="h-4 w-4" />
+                              </Button>
+                            </div>
+                          </TableCell>
+                        </TableRow>
+                      ))
+                    ) : (
+                      <TableRow>
+                        <TableCell colSpan={6} className="text-center h-24">
+                          No verified hostels found
                         </TableCell>
                       </TableRow>
-                    ))
-                  ) : (
-                    <TableRow>
-                      <TableCell colSpan={6} className="text-center h-24">
-                        No verified hostels found
-                      </TableCell>
-                    </TableRow>
-                  )}
-                </TableBody>
-              </Table>
-            </div>
+                    )}
+                  </TableBody>
+                </Table>
+              </div>
+            )}
           </TabsContent>
         </Tabs>
       </div>
