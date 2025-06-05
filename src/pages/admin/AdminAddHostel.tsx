@@ -14,6 +14,9 @@ import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from "@
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { QRCodeCanvas } from 'qrcode.react';
 
+import type { Libraries } from '@react-google-maps/api';
+const GOOGLE_MAP_LIBRARIES: Libraries = ['places'];
+
 const AdminAddHostel = () => {
   const navigate = useNavigate();
   const form = useForm({
@@ -279,7 +282,7 @@ const AdminAddHostel = () => {
                       <label htmlFor="location" className="block text-sm font-medium mb-1">
                         Hostel Location on Map *
                       </label>
-                      <LoadScript googleMapsApiKey={import.meta.env.VITE_GOOGLE_MAPS_API_KEY} libraries={['places']}>
+                      <LoadScript googleMapsApiKey={import.meta.env.VITE_GOOGLE_MAPS_API_KEY} libraries={GOOGLE_MAP_LIBRARIES}>
                         <Autocomplete
                           onLoad={(autocomplete) => (autocompleteRef.current = autocomplete)}
                           onPlaceChanged={() => {
