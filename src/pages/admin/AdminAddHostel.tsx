@@ -145,18 +145,30 @@ const AdminAddHostel = () => {
         setCreatingOwner(false);
         return;
       }
-      // 2.5. Insert into profiles table if not exists
-      // NOTE: If you see a row-level security error here, update your Supabase RLS policy for the profiles table to allow admin inserts.
-      const { error: profileInsertError } = await supabase.from("profiles").upsert({
-        id: data.user.id,
-        name: newOwner.name,
-        email: trimmedEmail,
-        phone: newOwner.phone,
-        role: "owner"
-      }, { onConflict: "id" });
-      if (profileInsertError) {
-        console.error("Supabase profiles insert error:", profileInsertError);
-        toast.error("Owner created but failed to create profile record. (Check RLS policy)");
+      // 2.5. Call backend API to upsert profile (permanent fix for RLS)
+      try {
+        const profileRes = await fetch("/api/upsert-profile", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            id: data.user.id,
+            name: newOwner.name,
+            email: trimmedEmail,
+            phone: newOwner.phone,
+            role: "owner"
+          })
+        });
+        if (!profileRes.ok) {
+          const errText = await profileRes.text();
+          console.error("Profile upsert API error (response not ok):", errText);
+          toast.error("Owner created but failed to create profile record (backend): " + errText);
+        } else {
+          const result = await profileRes.json();
+          console.log("Profile upsert API success:", result);
+        }
+      } catch (apiErr) {
+        console.error("Profile upsert API error (fetch exception):", apiErr);
+        toast.error("Owner created but failed to create profile record (API error)");
       }
       // 3. Refresh owners list and select new owner
       fetchOwners();
@@ -587,10 +599,13 @@ const AdminAddHostel = () => {
       </div>
       {/* Add Owner Dialog */}
       <Dialog open={showAddOwnerDialog} onOpenChange={setShowAddOwnerDialog}>
-        <DialogContent>
+        <DialogContent aria-describedby="add-owner-description">
           <DialogHeader>
             <DialogTitle>Add New Owner</DialogTitle>
           </DialogHeader>
+          <div id="add-owner-description" className="sr-only">
+            Fill out the form to add a new hostel owner. All fields are required.
+          </div>
           <div className="space-y-4">
             <div>
               <label htmlFor="ownerName" className="block text-sm font-medium mb-1">Name *</label>
